@@ -4,7 +4,7 @@ from smtplib import SMTP, SMTPConnectError
 from email.mime.text import MIMEText
 from logging import getLogger
 
-from requests import post
+from requests import post, HTTPError
 from pyotp import TOTP
 
 
@@ -70,11 +70,14 @@ def get_credentials(scss_dict):
     # false.  This isn't recommended (as it defeats the purpose of
     # verification), but it will make the code work in an emergency.
     scss_response = post(url, headers=headers)
-    if scss_response.status_code == 200:
-        data = scss_response.json().get('gpg_pass')
-        log.debug('Credentials successfully retrieved from SCSS')
-    else:
-        log.error('Unable to retrieve credentials from SCSS.  The HTTP '
-                  'error code is %s', scss_response.status_code)
+    try:
+        scss_response.raise_for_status
+    except HTTPError:
+        log.exception(
+            'Unable to retrieve credentials from SCSS.  The HTTP error code '
+            'is %s', scss_response.status_code
+        )
         exit(1)
+    data = scss_response.json().get('gpg_pass')
+    log.debug('Credentials successfully retrieved from SCSS')
     return data

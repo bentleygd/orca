@@ -14,7 +14,8 @@ from libs.coreutils import get_credentials
 
 class get_phish_tank_urls:
     """Gets phishing URLs from PhishTank.org.
-    Please note that this is a descriptor."""
+    Please note that this is a descriptor designed specifically for
+    the OrcaPod class"""
 
     def __get__(self, obj, objtype=None):
         """
@@ -59,7 +60,8 @@ class get_phish_tank_urls:
 
 class get_openphish_urls:
     """Gets phishing URLs from OpenPhish.
-    Please note that this is a descriptor."""
+    Please note that this is a descriptor designed specifically for
+    the OrcaPod class."""
 
     def __get__(self, obj, objtype=None):
         """Gets phishing URLs from OpenPhish.com.
@@ -100,7 +102,8 @@ class get_openphish_urls:
 
 class get_ad_emails:
     """Gets email address from AD via LDAP.
-    Please note that this is a descriptor."""
+    Please note that this is a descriptor designed specifically for the Orca
+    and OrcaPod classes"""
 
     def __get__(self, obj, objtype=None):
         """
@@ -160,7 +163,7 @@ class get_ad_emails:
             mailbox = data['mail'][0].decode().lower()
             mailbox_list.append(mailbox)
         log.info(
-            'Successfully retrieved active user information from %s',
+            'Successfully retrieved mailboxes from %s',
             ldap_url
         )
         # Unbinding the LDAP object as a good house cleaning measure.
@@ -168,8 +171,8 @@ class get_ad_emails:
         return mailbox_list
 
 
-class Orca:
-    """Automation for phishing mitigation and remediation.
+class OrcaPod:
+    """Automation for bulk phishing mitigation and remediation.
 
     Class Variables:
     config - ConfigParser(), The configuration file used by all
@@ -190,9 +193,11 @@ class Orca:
         phish_tank_api - str(), The API key used for PhishTank.
         tm_api - str(), Trend Micro Cloud App Security API key.
         hunting_grounds - list(), A list of mailboxes.
+        ldap_dict - dict(), A dictionary with the values needed to
+        connect to a LDAP URL using ldap3.
         """
-        self.phish_tank_api = config['phish_tank_api']
-        self.tm_api = config['tm_api']
+        self.phish_tank_api = config['api']['phish_tank_api']
+        self.tm_api = config['api']['tm_api']
         self.ldap_dict = {
             'url': config['ldap']['url'],
             'bind_dn': config['ldap']['bind_dn'],
@@ -235,16 +240,14 @@ class Orca:
         # Iterate through the list of phishing URLs, searching for each
         # URL in every mailbox.
         for url in url_list:
-            if search_counter == 20:
-                sleep(60)
-                search_counter = 0
             for mailbox in self._mailboxes:
                 if search_counter == 20:
                     sleep(60)
                     search_counter = 0
+                    log.debug('API rate limit reached.  Sleeping.')
                 params = {
                     'mailbox': mailbox,
-                    'lastndays': 1,  # Let's not kill the system.
+                    'lastndays': 1,
                     'url': url,
                 }
                 response = request(
@@ -277,11 +280,7 @@ class Orca:
                         }
                     )
                     log.info('Phishing email found in %s' % mailbox)
-                    search_counter += 1
-                else:
-                    # Increasing the counter by 1 even if there are no
-                    # results for rate limiting.
-                    search_counter += 1
+                search_counter += 1
         return phishes
 
     def bulk_eat_phish(self, phish_list):
@@ -289,7 +288,8 @@ class Orca:
 
         Input:
         phish_list - list(), A list of dict() that contain the following
-        keys: mailbox, mmi, mui and delivery time.
+        keys: mailbox, mmi, mui and delivery time.  This should be the
+        returned value from Orca.bulk_find_phish().
 
         Output:
         None.
@@ -299,18 +299,22 @@ class Orca:
         non-200 response."""
         # It's five o'clock somewhere.  Time for logging!
         log = getLogger(__name__)
-        # Setting up the API request.
+        # Initializing variables and constants.
         tm_url = 'https://api.tmcas.trendmicro.com/v1/mitigation/mails'
         headers = {
             'Authorization': 'Bearer ' + self.tm_api,
             'Content-Type': 'application/json'
         }
-        # The Orca eats a lot of phishies!
         eat_counter = 0
+        # Iterate through the phish list, making an API call to delete
+        # the phish.  If there is an error deleting a phish, log it
+        # and continue.
         for phish in phish_list:
             if eat_counter == 20:
                 sleep(60)
                 eat_counter = 0
+                log.debug('API rate limit reached.  Sleeping.')
+            # All of these are required parameters.  Do not change.
             params = {
                 'action_type': 'MAIL_DELETE',
                 'service': 'exchange',
@@ -332,4 +336,279 @@ class Orca:
                 log.exception('Non-200 response when deleting phishing email.')
                 eat_counter += 1
                 continue
+            log.info('Phishing email deleted from %s' % phish['mailbox'])
             eat_counter += 1
+
+
+class Orca:
+    """
+    One off phishing search to be invoked via CLI.
+
+    Class Variables:
+    config - The config file used by all instances of this class.
+
+    Methods:
+    find_phish - Searches through mailboxes for one phishing message.
+    delete_phish - Deletes a single phishing email from all mailboxes.
+    """
+    config = ConfigParser()
+    config.read('orca.ini')
+
+    def __init__(self, config):
+        """
+        Inputs:
+        config - Dolphin.config.
+
+        Instance variables:
+        mailboxes - list(), A list of mailboxes to search through.
+        ldap_dict - dict(), A dictionary with the values needed to
+        connect to a LDAP URL using ldap3.
+        """
+        self.ldap_dict = {
+            'url': config['ldap']['url'],
+            'bind_dn': config['ldap']['bind_dn'],
+            'search_ou': config['ldap']['search_ou'].split('|'),
+            'bind_secret': get_credentials({
+                'api_key': config['scss']['api_key'],
+                'otp': config['scss']['otp'],
+                'userid': config['scss']['user'],
+                'url': config['scss']['url']
+            })
+        }
+        self.mailboxes = get_ad_emails()
+        self.tm_api = config['api']['tm_api']
+
+    def find_phish_url(self, url):
+        """Finds phishes that match the provided URL.
+
+        Inputs:
+        url - str(), The URL to search for.
+
+        Outputs:
+        phish_list - list(), A list of mailboxes and mail information
+        for the provided URL.
+
+        Exceptions:
+        HTTPError - Occurs when there is a non-200 HTTP response."""
+        # Logging, it's what's for dinner.
+        log = getLogger(__name__)
+        # Initializing variabels and constants.
+        phish_list = []
+        headers = {'Authorization:' 'Bearer ' + self.tm_api}
+        tm_url = 'https://api.tmcas.trendmicro.com/v1/sweeping/mails'
+        search_counter = 0
+        # Looking for the phishing URL in each mailbox.
+        for mailbox in self.mailboxes:
+            # API rate limit check.
+            if search_counter == 20:
+                log.debug('API rate limit reached.  Sleeping for 60 seconds.')
+                sleep(60)
+                search_counter = 0
+            params = {
+                'mailbox': mailbox,
+                'lastndays': 1,
+                'url': url,
+            }
+            response = request(
+                'GET',
+                tm_url,
+                headers=headers,
+                params=params
+            )
+            # Checking if the search returned any results.
+            try:
+                response.raise_for_status
+            except HTTPError:
+                log.exception(
+                    'Abnormal HTTP response searching for phishing email.'
+                )
+                # Incrementing search counter for API rate limiting.
+                search_counter += 1
+                continue
+            json_data = response.json()
+            phish_data = json_data['value'][0]
+            phish_list.append({
+                'mailbox': phish_data['mailbox'],
+                'mui': phish_data['mail_unique_id'],
+                'mmi': phish_data['mail_message_id'],
+                'd_time': phish_data['mail_message_delivery_time']
+            })
+            # Incrementing search counter for API rate limiting.
+            log.info('Phishing email found in %s' % mailbox)
+            search_counter += 1
+        return phish_list
+
+    def find_evil_file(self, filehash):
+        """Searches for emails that contain a malicious file hash.
+
+        Input:
+        filehash - str(), the SHA1 digest of a file to search for.
+
+        Returns
+        evil_list - list(), A list of dictionaries containing the
+        following keys: mailbox, mmi, mui and d_time.
+
+        Exceptions:
+        HTTPError - Occurs when there is a non-200 response."""
+        # Start logging.
+        log = getLogger(__name__)
+        # Initializing variables and constants.
+        tm_url = 'https://api.tmcas.trendmicro.com/v1/sweeping/mails'
+        headers = {'Authorization': 'Bearer ' + self.tm_api}
+        search_counter = 0
+        evil_list = []
+        # Searching for emails that have an attachment with a matching
+        # file hash.
+        for mailbox in self.mailboxes:
+            if search_counter == 20:
+                log.debug('API rate limit reached.  Sleeping...')
+                sleep(60)
+                search_counter = 0  # Resetting rate limit counter.
+            params = {
+                'mailbox': mailbox,
+                'lastndays': 7,
+                'file_sha1': filehash
+            }
+            response = request(
+                'GET',
+                tm_url,
+                params=params,
+                headers=headers
+            )
+            try:
+                response.raise_for_status
+            except HTTPError:
+                log.exception(
+                    'Abnormal HTTP response when performing file search'
+                )
+                # Incrementing rate limit counter for an unsuccesful
+                # search.
+                search_counter += 1
+                continue
+            json_data = response.json()
+            evil_file_data = json_data['value'][0]
+            evil_list.append({
+                'mailbox': evil_file_data['mailbox'],
+                'mui': evil_file_data['mail_unique_id'],
+                'mmi': evil_file_data['mail_message_id'],
+                'd_time': evil_file_data['mail_message_delivery_time']
+            })
+            log.info('Email with malicious file found in %s' % mailbox)
+            # Incrementing rate limit counter for successful attempt.
+            search_counter += 1
+        return evil_list
+
+    def find_evil_sender(self, sender):
+        """Searches for emails from a malicious sender.
+
+        Input:
+        sender - str(), malicious email address.
+
+        Returns
+        evil_list - list(), A list of dictionaries containing the
+        following keys: mailbox, mmi, mui and d_time.
+
+        Exceptions:
+        HTTPError - Occurs when there is a non-200 response."""
+        # Start logging.
+        log = getLogger(__name__)
+        # Initializing variables and constants.
+        tm_url = 'https://api.tmcas.trendmicro.com/v1/sweeping/mails'
+        headers = {'Authorization': 'Bearer ' + self.tm_api}
+        search_counter = 0
+        evil_list = []
+        # Searching for emails from a malicious sender.
+        for mailbox in self.mailboxes:
+            if search_counter == 20:
+                log.debug('API rate limit reached.  Sleeping...')
+                sleep(60)
+                search_counter = 0  # Resetting rate limit counter.
+            params = {
+                'mailbox': mailbox,
+                'lastndays': 1,
+                'sender': sender
+            }
+            response = request(
+                'GET',
+                tm_url,
+                params=params,
+                headers=headers
+            )
+            try:
+                response.raise_for_status
+            except HTTPError:
+                log.exception(
+                    'Abnormal HTTP response when performing sender search'
+                )
+                # Incrementing rate limit counter for an unsuccesful
+                # search.
+                search_counter += 1
+                continue
+            json_data = response.json()
+            evil_sender_data = json_data['value'][0]
+            evil_list.append({
+                'mailbox': evil_sender_data['mailbox'],
+                'mui': evil_sender_data['mail_unique_id'],
+                'mmi': evil_sender_data['mail_message_id'],
+                'd_time': evil_sender_data['mail_message_delivery_time']
+            })
+            log.info('Email from malicious sender found in %s' % mailbox)
+            # Incrementing rate limit counter for successful attempt.
+            search_counter += 1
+        return evil_list
+
+    def bulk_purge_email(self, evil_list):
+        """Deletes evil emails from O365 (in bulk)
+
+        Input:
+        evil_list - list(), A list of dict() that contain the following
+        keys: mailbox, mmi, mui and delivery time.
+
+        Output:
+        None.
+
+        Exceptions:
+        HTTPError - Excpetion that occurs when a request returns a
+        non-200 response."""
+        # It's five o'clock somewhere.  Time for logging!
+        log = getLogger(__name__)
+        # Setting up the API request.
+        tm_url = 'https://api.tmcas.trendmicro.com/v1/mitigation/mails'
+        headers = {
+            'Authorization': 'Bearer ' + self.tm_api,
+            'Content-Type': 'application/json'
+        }
+        # Initialing API counter.
+        api_counter = 0
+        # Iterate through the list of evil emails, making an API call
+        # to delete the email in question.  If there is an error
+        # purging the evil, log it and skip over that item.
+        for evil in evil_list:
+            if api_counter == 20:
+                sleep(60)
+                api_counter = 0
+                log.debug('API rate limit reached.  Sleeping.')
+            # All of these are required parameters.  Do not change.
+            params = {
+                'action_type': 'MAIL_DELETE',
+                'service': 'exchange',
+                'account_provider': 'office365',
+                'mailbox': evil['mailbox'],
+                'mail_message_id': evil['mmi'],
+                'mail_unique_id': evil['mui'],
+                'mail_message_delivery_time': evil['d_time']
+            }
+            response = request(
+                'POST',
+                tm_url,
+                headers=headers,
+                params=params
+            )
+            try:
+                response.raise_for_status
+            except HTTPError:
+                log.exception('Non-200 response when deleting phishing email.')
+                api_counter += 1
+                continue
+            log.info('Evil email deleted from %s' % evil['mailbox'])
+            api_counter += 1
