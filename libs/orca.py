@@ -332,7 +332,7 @@ class OrcaPod:
                 'POST',
                 tm_url,
                 headers=headers,
-                params=params
+                json=[params]
             )
             try:
                 if response.status_code != 201:
@@ -346,8 +346,7 @@ class OrcaPod:
 
 
 class Orca:
-    """
-    One off phishing search to be invoked via CLI.
+    """One off phishing search to be invoked via CLI.
 
     Class Variables:
     config - The config file used by all instances of this class.
@@ -355,14 +354,17 @@ class Orca:
     Methods:
     find_phish - Finds a phishing email based on supplied keyword
     arguments.
-    purge_email - Deletes a single phishing email from all mailboxes.
-    pull_email - Quarantines a single phishing email from all mailboxes.
+    purge_email - Deletes a single phishing email from affected
+    mailboxes.
+    pull_email - Quarantines a single phishing email from all
+    mailboxes.
     """
     config = ConfigParser()
     config.read('orca.ini')
 
     def __init__(self):
-        """
+        """One off phishing search to be invoked via CLI.
+
         Inputs:
         config - Orca.config.
 
@@ -370,6 +372,7 @@ class Orca:
         mailboxes - list(), A list of mailboxes to search through.
         ldap_dict - dict(), A dictionary with the values needed to
         connect to a LDAP URL using ldap3.
+        tm_api - str(), An API key used to authenticate to TrendMicro.
         """
         # self.ldap_dict = {
         #    'url': Orca.config['ldap']['url'],
@@ -386,7 +389,8 @@ class Orca:
         self.tm_api = Orca.config['api']['tm_api']
 
     def find_phish(self, **phish_):
-        """Searches for emails from a malicious sender.
+        """Searches for phishing emails based on supplied keyword
+        arguments.
 
         Keyword Arguments:
         sender - str(), malicious email address.  Required if not
@@ -401,7 +405,7 @@ class Orca:
         following keys: mailbox, mmi, mui and d_time.
 
         Exceptions:
-        HTTPError - Occurs when there is a non-200 response."""
+        HTTPError - Occurs when there is a non-200s response."""
         # Start logging.
         log = getLogger(__name__)
         # Initializing variables and constants.
@@ -415,18 +419,21 @@ class Orca:
                 log.debug('API rate limit reached.  Sleeping...')
                 sleep(60)
                 search_counter = 0  # Resetting rate limit counter.
+            # Search used when URL is supplied.
             if 'url' in phish_:
                 params = {
                     'mailbox': mailbox,
                     'lastndays': 1,
                     'url': phish_['url'],
                 }
+            # Search used when file_hash is supplied.
             elif 'file_hash' in phish_:
                 params = {
                   'file_sha1': phish_['file_hash'],
                   'mailbox': mailbox,
                   'lastndays': 1,
                 }
+            # Search used when subject and sender is supplied.
             elif 'subject' in phish_ and 'sender' in phish_:
                 params = {
                     'mailbox': mailbox,
@@ -435,6 +442,7 @@ class Orca:
                     'subject': phish_['subject'],
                     'limit': 1000
                 }
+            # Search used when file extension and sender is supplied.
             elif 'file_ext' in phish_ and 'sender' in phish_:
                 params = {
                     'mailbox': mailbox,
@@ -443,6 +451,8 @@ class Orca:
                     'file_extension': phish_['file_ext'],
                     'limit': 1000
                 }
+            # Search used when sender, subject and file extnension is
+            # supplied.
             elif (
                 'file_ext' in phish_ and
                 'subject' in phish_ and
@@ -456,6 +466,7 @@ class Orca:
                     'file_extension': phish_['file_ext'],
                     'limit': 1000
                 }
+            # Search used when only the sender is supplied.
             elif 'sender' in phish_:
                 params = {
                     'mailbox': mailbox,
@@ -469,6 +480,8 @@ class Orca:
                 params=params,
                 headers=headers
             )
+            # Checking if the search was successful from an API call
+            # perpsective (i.e., looking for a HTTP 200)
             try:
                 response.raise_for_status
             except HTTPError:
@@ -603,6 +616,7 @@ class Orca:
                 'mail_unique_id': evil['mui'],
                 'mail_message_delivery_time': evil['d_time']
             }
+            log.debug('Attempting to quarantine %s' % json_body)
             response = request(
                 'POST',
                 tm_url,

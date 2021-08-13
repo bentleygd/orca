@@ -3,6 +3,7 @@ from socket import gethostbyname, gaierror
 from smtplib import SMTP, SMTPConnectError
 from email.mime.text import MIMEText
 from logging import getLogger
+from re import match
 
 from requests import post, HTTPError
 from pyotp import TOTP
@@ -81,3 +82,98 @@ def get_credentials(scss_dict):
     data = scss_response.json().get('gpg_pass')
     log.debug('Credentials successfully retrieved from SCSS')
     return data
+
+
+class ValidateInput:
+    def __init__(self):
+        """Input validation class
+
+        Methods:
+        URL - Input validation for a URL.
+        SHA1 - Input validation for a SHA1 hash.
+        Email - Input validation for a email address.
+        FileExt - Input validation for a file extension.
+        Subject - Input validation for email subject line."""
+
+    def URL(self, url):
+        """Input validation for a URL.
+
+        Input:
+        url - str(), The supplied URL to validate.
+
+        Returns:
+        Boolean - The method will return True if input validation
+        passes or False if input validation fails."""
+        url_pattern = (
+            r'(http:|https:)\/\/(\w+\.\w+|\w+\.\w+\.\w+|\w+\.\w+\.\w+\.\w+)\/\S+'
+        )
+        url_validate = match(url_pattern, url)
+        if url_validate:
+            return True
+        else:
+            return False
+
+    def Email(self, email):
+        """Input validation for an email address.
+
+        Input:
+        email - str(), The supplied email address to validate.
+
+        Returns:
+        Boolean - The method will return True if input validation
+        passes or False if input validation fails."""
+        email_pattern = r'[a-zA-Z0-9_\.]{3,32}@[a-zA-Z0-9_]{3,32}\.\w{3,6}'
+        email_validate = match(email_pattern, email)
+        if email_validate:
+            return True
+        else:
+            return False
+
+    def SHA1(self, hash):
+        """Input validation for a SHA1 hash.
+
+        Input:
+        hash - str(), The supplied sha1 hash.
+
+        Returns:
+        Boolean - The method will return True if input validation
+        passes or False if input validation fails."""
+        hash_pattern = r'[a-z0-9]{40}'
+        hash_validate = match(hash_pattern, hash)
+        if hash_validate:
+            return True
+        else:
+            return False
+
+    def FileExt(self, file_ext):
+        """Input validation for a file extension.
+
+        Input:
+        file_ext - str(), The file extension.
+
+        Returns:
+        Boolean - The method will return True if input validation
+        passes or False if input validation fails."""
+        ext_pattern = r'[a-zA-Z0-9]{3,4}'
+        ext_validate = match(ext_pattern, file_ext)
+        if ext_validate:
+            return True
+        else:
+            return False
+
+    def Subject(self, subject_line):
+        """Input validation for an email subject line.
+        Yes, it isn't a whole lot.
+
+        Input:
+        subject_line - str(), The email subject line to search for.
+
+        Returns:
+        Boolean - The method will return True if input validation
+        passes or False if input validation fails."""
+        subject_pattern = r'".{1,998}"'
+        subject_validate = match(subject_pattern, subject_line)
+        if subject_validate:
+            return True
+        else:
+            return False
