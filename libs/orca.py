@@ -369,25 +369,10 @@ class Orca:
         config - Orca.config.
 
         Instance variables:
-        mailboxes - list(), A list of mailboxes to search through.
-        ldap_dict - dict(), A dictionary with the values needed to
-        connect to a LDAP URL using ldap3.
         tm_api - str(), An API key used to authenticate to TrendMicro.
         api_counter - int(), A counter used to stay within the API
         rate limit.
         """
-        # self.ldap_dict = {
-        #    'url': Orca.config['ldap']['url'],
-        #    'bind_dn': Orca.config['ldap']['bind_dn'],
-        #    'search_ou': Orca.config['ldap']['search_ou'].split('|'),
-        #    'bind_secret': get_credentials({
-        #        'api_key': Orca.config['scss']['api_key'],
-        #        'otp': Orca.config['scss']['otp'],
-        #        'userid': Orca.config['scss']['user'],
-        #       'url': Orca.config['scss']['url']
-        #    })
-        # }
-        # self.mailboxes = get_ad_emails()
         self.tm_api = Orca.config['api']['tm_api']
         self.api_counter = int()
 
@@ -416,118 +401,115 @@ class Orca:
         headers = {'Authorization': 'Bearer ' + self.tm_api}
         evil_list = []
         # Searching for emails from a malicious sender.
-        for mailbox in self.mailboxes:
-            if self.api_counter == 20:
-                log.debug('API rate limit reached.  Sleeping for 60 seconds.')
-                sleep(60)
-                self.api_counter = 0  # Resetting rate limit counter.
-            # Search used when URL is supplied.
-            if 'url' in phish_:
-                log.debug('Performing URL search.')
-                params = {
-                    'mailbox': mailbox,
-                    'lastndays': 1,
-                    'url': phish_['url'],
-                }
-            # Search used when file_hash is supplied.
-            elif 'file_hash' in phish_:
-                log.debug('Performing SHA1 hash search.')
-                params = {
-                  'file_sha1': phish_['file_hash'],
-                  'mailbox': mailbox,
-                  'lastndays': 1,
-                }
-            # Search used when sender, subject and file extnension is
-            # supplied.
-            elif (
-                'file_ext' in phish_ and
-                'subject' in phish_ and
-                'sender' in phish_
-            ):
-                log.debug('Performing sender/subject/file extension search.')
-                params = {
-                    'mailbox': mailbox,
-                    'lastndays': 1,
-                    'sender': phish_['sender'],
-                    'subject': phish_['subject'],
-                    'file_extension': phish_['file_ext'],
-                    'limit': 1000
-                }
-            # Search used when subject and sender is supplied.
-            elif 'subject' in phish_ and 'sender' in phish_:
-                log.debug('Performing sender/subject search.')
-                params = {
-                    'mailbox': mailbox,
-                    'lastndays': 1,
-                    'sender': phish_['sender'],
-                    'subject': phish_['subject'],
-                    'limit': 1000
-                }
-            # Search used when file extension and sender is supplied.
-            elif 'file_ext' in phish_ and 'sender' in phish_:
-                log.debug('Performing sender/file extension search.')
-                params = {
-                    'mailbox': mailbox,
-                    'lastndays': 1,
-                    'sender': phish_['sender'],
-                    'file_extension': phish_['file_ext'],
-                    'limit': 1000
-                }
-            # Search used when only the sender is supplied.
-            elif 'sender' in phish_:
-                log.debug('Performing sender search.')
-                params = {
-                    'mailbox': mailbox,
-                    'lastndays': 1,
-                    'sender': phish_['sender'],
-                    'limit': 1000
-                }
-            response = request(
-                'GET',
-                tm_url,
-                params=params,
-                headers=headers
+        if self.api_counter == 20:
+            log.debug('API rate limit reached.  Sleeping for 60 seconds.')
+            sleep(60)
+            self.api_counter = 0  # Resetting rate limit counter.
+        # Search used when URL is supplied.
+        if 'url' in phish_:
+            log.debug('Performing URL search.')
+            params = {
+                'lastndays': 1,
+                'url': phish_['url'],
+                'limit': 1000
+            }
+        # Search used when file_hash is supplied.
+        elif 'file_hash' in phish_:
+            log.debug('Performing SHA1 hash search.')
+            params = {
+                'file_sha1': phish_['file_hash'],
+                'lastndays': 1,
+                'limit': 1000
+            }
+        # Search used when sender, subject and file extnension is
+        # supplied.
+        elif (
+            'file_ext' in phish_ and
+            'subject' in phish_ and
+            'sender' in phish_
+        ):
+            log.debug('Performing sender/subject/file extension search.')
+            params = {
+                'lastndays': 1,
+                'sender': phish_['sender'],
+                'subject': phish_['subject'],
+                'file_extension': phish_['file_ext'],
+                'limit': 1000
+            }
+        # Search used when subject and sender is supplied.
+        elif 'subject' in phish_ and 'sender' in phish_:
+            log.debug('Performing sender/subject search.')
+            params = {
+                'lastndays': 1,
+                'sender': phish_['sender'],
+                'subject': phish_['subject'],
+                'limit': 1000
+            }
+        # Search used when file extension and sender is supplied.
+        elif 'file_ext' in phish_ and 'sender' in phish_:
+            log.debug('Performing sender/file extension search.')
+            params = {
+                'lastndays': 1,
+                'sender': phish_['sender'],
+                'file_extension': phish_['file_ext'],
+                'limit': 1000
+            }
+        # Search used when only the sender is supplied.
+        elif 'sender' in phish_:
+            log.debug('Performing sender search.')
+            params = {
+                'lastndays': 1,
+                'sender': phish_['sender'],
+                'limit': 1000
+            }
+        response = request(
+            'GET',
+            tm_url,
+            params=params,
+            headers=headers
+        )
+        # Checking if the search was successful from an API call
+        # perpsective (i.e., looking for a HTTP 200)
+        try:
+            response.raise_for_status
+        except HTTPError:
+            log.exception(
+                'Abnormal HTTP response when performing sender search. ' +
+                'The API response is %s' % response.text
             )
-            # Checking if the search was successful from an API call
-            # perpsective (i.e., looking for a HTTP 200)
-            try:
-                response.raise_for_status
-            except HTTPError:
-                log.exception(
-                    'Abnormal HTTP response when performing sender search'
-                )
-                # Incrementing rate limit counter for an unsuccesful
-                # search.
-                self.api_counter += 1
-                continue
-            json_data = response.json()
-            evil_sender_data = json_data['value']
-            for evil_data in evil_sender_data:
-                evil_list.append({
-                    'mailbox': evil_data['mailbox'],
-                    'mui': evil_data['mail_unique_id'],
-                    'mmi': evil_data['mail_message_id'],
-                    'd_time': evil_data['mail_message_delivery_time']
-                })
+            # Incrementing rate limit counter for an unsuccesful
+            # search.
+            self.api_counter += 1
+        json_data = response.json()
+        evil_sender_data = json_data['value']
+        for evil_data in evil_sender_data:
+            evil_list.append({
+                'mailbox': evil_data['mailbox'],
+                'mui': evil_data['mail_unique_id'],
+                'mmi': evil_data['mail_message_id'],
+                'd_time': evil_data['mail_message_delivery_time']
+            })
             if 'sender' in phish_:
                 log.info(
-                    'Email from %s found in %s' % (phish_['sender'], mailbox)
+                    'Email from %s found in %s' %
+                    (phish_['sender'], evil_data['mailbox'])
                 )
             elif 'url' in phish_:
                 log.info(
-                    'Email with %s found in %s' % (phish_['url'], mailbox)
+                    'Email with %s found in %s' %
+                    (phish_['url'], evil_data['mailbox'])
                 )
             elif 'file_hash' in phish_:
                 log.info(
                     'Email with malicious file matching %s found in %s' %
-                    (phish_['file_hash'], mailbox)
+                    (phish_['file_hash'], evil_data['mailbox'])
                 )
-            # Incrementing rate limit counter for successful attempt.
-            self.api_counter += 1
+        # Incrementing rate limit counter for successful attempt.
+        self.api_counter += 1
         return evil_list
 
     def purge_email(self, evil_list):
-        """Deletes evil emails from O365 (in bulk)
+        """Deletes evil emails from O365.
 
         Input:
         evil_list - list(), A list of dict() that contain the following
@@ -550,11 +532,9 @@ class Orca:
         # Iterate through the list of evil emails, making an API call
         # to delete the email in question.  If there is an error
         # purging the evil, log it and skip over that item.
-        for evil in evil_list:
-            if self.api_counter == 20:
-                sleep(60)
-                self.api_counter = 0
-                log.debug('API rate limit reached.  Sleeping.')
+        json_array = []
+        while len(evil_list) != 0:
+            evil = evil_list.pop(0)
             # All of these are required parameters.  Do not change.
             json_body = {
                 'action_type': 'MAIL_DELETE',
@@ -565,21 +545,61 @@ class Orca:
                 'mail_unique_id': evil['mui'],
                 'mail_message_delivery_time': evil['d_time']
             }
-            response = request(
-                'POST',
-                tm_url,
-                headers=headers,
-                json=[json_body]
-            )
-            try:
-                if response.status_code != 201:
-                    raise HTTPError
-            except HTTPError:
-                log.exception('Non-201 response when deleting phishing email.')
+            log.debug('Added to delete call %s' % json_body)
+            json_array.append(json_body)
+            # Making sure to keep the JSON array under 20 entries.
+            if len(json_array) == 20:
+                # Checking API count.
+                if self.api_counter == 20:
+                    sleep(60)
+                    self.api_counter = 0
+                    log.debug('API rate limit reached.  Sleeping.')
+                # Posting JSON array.
+                response = request(
+                    'POST',
+                    tm_url,
+                    headers=headers,
+                    json=json_array
+                )
+                # Checking whether or not the API call is successful.
+                try:
+                    if response.status_code != 201:
+                        raise HTTPError
+                except HTTPError:
+                    log.exception(
+                        'Non-201 response when pulling phishing email.'
+                    )
+                    self.api_counter += 1
+                    continue
                 self.api_counter += 1
-                continue
-            log.info('Evil email deleted from mailbox: %s' % evil['mailbox'])
+                log.info('Deleted emails from %d mailboxes' % len(json_array))
+                log.debug('Array has %d entries.  Clearing.' % len(json_array))
+                json_array.clear()
+        # Sending the API call with 19 or fewer entries.
+        # Checking API count.
+        if self.api_counter == 20:
+            sleep(60)
+            self.api_counter = 0
+            log.debug('API rate limit reached.  Sleeping.')
+        # Posting JSON array.
+        response = request(
+            'POST',
+            tm_url,
+            headers=headers,
+            json=json_array
+        )
+        # Checking whether or not the API call is successful.
+        try:
+            if response.status_code != 201:
+                raise HTTPError
+        except HTTPError:
+            log.exception(
+                'Non-201 response when pulling phishing email.  The API ' +
+                'response is %s' % response.text
+            )
             self.api_counter += 1
+        log.info('Deleted emails from %d mailboxes' % (len(json_array)))
+        self.api_counter += 1
 
     def pull_email(self, evil_list):
         """Quarantines evil emails from O365.
@@ -603,13 +623,11 @@ class Orca:
             'Content-Type': 'application/json'
         }
         # Iterate through the list of evil emails, making an API call
-        # to delete the email in question.  If there is an error
-        # purging the evil, log it and skip over that item.
-        for evil in evil_list:
-            if self.api_counter == 20:
-                sleep(60)
-                self.api_counter = 0
-                log.debug('API rate limit reached.  Sleeping.')
+        # to quarantine the email in question.  If there is an error
+        # containing the evil, log it and skip over that item.
+        json_array = []
+        while len(evil_list) != 0:
+            evil = evil_list.pop(0)
             # All of these are required parameters.  Do not change.
             json_body = {
                 'action_type': 'MAIL_QUARANTINE',
@@ -620,19 +638,57 @@ class Orca:
                 'mail_unique_id': evil['mui'],
                 'mail_message_delivery_time': evil['d_time']
             }
-            log.debug('Attempting to quarantine %s' % json_body)
-            response = request(
-                'POST',
-                tm_url,
-                headers=headers,
-                json=[json_body]
-            )
-            try:
-                if response.status_code != 201:
-                    raise HTTPError
-            except HTTPError:
-                log.exception('Non-201 response when pulling phishing email.')
+            log.debug('Added to quarantine call %s' % json_body)
+            json_array.append(json_body)
+            # Making sure to keep the JSON array under 20 entries.
+            if len(json_array) == 20:
+                # Checking API count.
+                if self.api_counter == 20:
+                    sleep(60)
+                    self.api_counter = 0
+                    log.debug('API rate limit reached.  Sleeping.')
+                # Posting JSON array.
+                response = request(
+                    'POST',
+                    tm_url,
+                    headers=headers,
+                    json=json_array
+                )
+                # Checking whether or not the API call is successful.
+                try:
+                    if response.status_code != 201:
+                        raise HTTPError
+                except HTTPError:
+                    log.exception(
+                        'Non-201 response when pulling phishing email.'
+                    )
+                    self.api_counter += 1
+                    continue
                 self.api_counter += 1
-                continue
-            log.info('Evil email pulled from mailbox: %s' % evil['mailbox'])
+                log.info('Pulled emails from %d mailboxes' % (len(json_array)))
+                json_array.clear()
+        # Sending the API call with 19 or fewer entries.
+        # Checking API count.
+        if self.api_counter == 20:
+            sleep(60)
+            self.api_counter = 0
+            log.debug('API rate limit reached.  Sleeping.')
+        # Posting JSON array.
+        response = request(
+            'POST',
+            tm_url,
+            headers=headers,
+            json=json_array
+        )
+        # Checking whether or not the API call is successful.
+        try:
+            if response.status_code != 201:
+                raise HTTPError
+        except HTTPError:
+            log.exception(
+                'Non-201 response when pulling phishing email.  The API ' +
+                'response is %s' % response.text
+            )
             self.api_counter += 1
+        log.info('Pulled emails from %d mailboxes' % (len(json_array)))
+        self.api_counter += 1
