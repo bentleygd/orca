@@ -373,6 +373,8 @@ class Orca:
         ldap_dict - dict(), A dictionary with the values needed to
         connect to a LDAP URL using ldap3.
         tm_api - str(), An API key used to authenticate to TrendMicro.
+        api_counter - int(), A counter used to stay within the API
+        rate limit.
         """
         # self.ldap_dict = {
         #    'url': Orca.config['ldap']['url'],
@@ -387,6 +389,7 @@ class Orca:
         # }
         # self.mailboxes = get_ad_emails()
         self.tm_api = Orca.config['api']['tm_api']
+        self.api_counter = int()
 
     def find_phish(self, **phish_):
         """Searches for phishing emails based on supplied keyword
@@ -411,16 +414,16 @@ class Orca:
         # Initializing variables and constants.
         tm_url = 'https://api.tmcas.trendmicro.com/v1/sweeping/mails'
         headers = {'Authorization': 'Bearer ' + self.tm_api}
-        search_counter = 0
         evil_list = []
         # Searching for emails from a malicious sender.
         for mailbox in self.mailboxes:
-            if search_counter == 20:
-                log.debug('API rate limit reached.  Sleeping...')
+            if self.api_counter == 20:
+                log.debug('API rate limit reached.  Sleeping for 60 seconds.')
                 sleep(60)
-                search_counter = 0  # Resetting rate limit counter.
+                self.api_counter = 0  # Resetting rate limit counter.
             # Search used when URL is supplied.
             if 'url' in phish_:
+                log.debug('Performing URL search.')
                 params = {
                     'mailbox': mailbox,
                     'lastndays': 1,
@@ -428,13 +431,31 @@ class Orca:
                 }
             # Search used when file_hash is supplied.
             elif 'file_hash' in phish_:
+                log.debug('Performing SHA1 hash search.')
                 params = {
                   'file_sha1': phish_['file_hash'],
                   'mailbox': mailbox,
                   'lastndays': 1,
                 }
+            # Search used when sender, subject and file extnension is
+            # supplied.
+            elif (
+                'file_ext' in phish_ and
+                'subject' in phish_ and
+                'sender' in phish_
+            ):
+                log.debug('Performing sender/subject/file extension search.')
+                params = {
+                    'mailbox': mailbox,
+                    'lastndays': 1,
+                    'sender': phish_['sender'],
+                    'subject': phish_['subject'],
+                    'file_extension': phish_['file_ext'],
+                    'limit': 1000
+                }
             # Search used when subject and sender is supplied.
             elif 'subject' in phish_ and 'sender' in phish_:
+                log.debug('Performing sender/subject search.')
                 params = {
                     'mailbox': mailbox,
                     'lastndays': 1,
@@ -444,30 +465,17 @@ class Orca:
                 }
             # Search used when file extension and sender is supplied.
             elif 'file_ext' in phish_ and 'sender' in phish_:
+                log.debug('Performing sender/file extension search.')
                 params = {
                     'mailbox': mailbox,
                     'lastndays': 1,
                     'sender': phish_['sender'],
-                    'file_extension': phish_['file_ext'],
-                    'limit': 1000
-                }
-            # Search used when sender, subject and file extnension is
-            # supplied.
-            elif (
-                'file_ext' in phish_ and
-                'subject' in phish_ and
-                'sender' in phish_
-            ):
-                params = {
-                    'mailbox': mailbox,
-                    'lastndays': 1,
-                    'sender': phish_['sender'],
-                    'subject': phish_['subject'],
                     'file_extension': phish_['file_ext'],
                     'limit': 1000
                 }
             # Search used when only the sender is supplied.
             elif 'sender' in phish_:
+                log.debug('Performing sender search.')
                 params = {
                     'mailbox': mailbox,
                     'lastndays': 1,
@@ -490,7 +498,7 @@ class Orca:
                 )
                 # Incrementing rate limit counter for an unsuccesful
                 # search.
-                search_counter += 1
+                self.api_counter += 1
                 continue
             json_data = response.json()
             evil_sender_data = json_data['value']
@@ -515,7 +523,7 @@ class Orca:
                     (phish_['file_hash'], mailbox)
                 )
             # Incrementing rate limit counter for successful attempt.
-            search_counter += 1
+            self.api_counter += 1
         return evil_list
 
     def purge_email(self, evil_list):
@@ -539,15 +547,13 @@ class Orca:
             'Authorization': 'Bearer ' + self.tm_api,
             'Content-Type': 'application/json'
         }
-        # Initialing API counter.
-        api_counter = 0
         # Iterate through the list of evil emails, making an API call
         # to delete the email in question.  If there is an error
         # purging the evil, log it and skip over that item.
         for evil in evil_list:
-            if api_counter == 20:
+            if self.api_counter == 20:
                 sleep(60)
-                api_counter = 0
+                self.api_counter = 0
                 log.debug('API rate limit reached.  Sleeping.')
             # All of these are required parameters.  Do not change.
             json_body = {
@@ -570,10 +576,10 @@ class Orca:
                     raise HTTPError
             except HTTPError:
                 log.exception('Non-201 response when deleting phishing email.')
-                api_counter += 1
+                self.api_counter += 1
                 continue
-            log.info('Evil email deleted from %s' % evil['mailbox'])
-            api_counter += 1
+            log.info('Evil email deleted from mailbox: %s' % evil['mailbox'])
+            self.api_counter += 1
 
     def pull_email(self, evil_list):
         """Quarantines evil emails from O365.
@@ -596,15 +602,13 @@ class Orca:
             'Authorization': 'Bearer ' + self.tm_api,
             'Content-Type': 'application/json'
         }
-        # Initialing API counter.
-        api_counter = 0
         # Iterate through the list of evil emails, making an API call
         # to delete the email in question.  If there is an error
         # purging the evil, log it and skip over that item.
         for evil in evil_list:
-            if api_counter == 20:
+            if self.api_counter == 20:
                 sleep(60)
-                api_counter = 0
+                self.api_counter = 0
                 log.debug('API rate limit reached.  Sleeping.')
             # All of these are required parameters.  Do not change.
             json_body = {
@@ -628,7 +632,7 @@ class Orca:
                     raise HTTPError
             except HTTPError:
                 log.exception('Non-201 response when pulling phishing email.')
-                api_counter += 1
+                self.api_counter += 1
                 continue
-            log.info('Evil email quarantined from %s' % evil['mailbox'])
-            api_counter += 1
+            log.info('Evil email pulled from mailbox: %s' % evil['mailbox'])
+            self.api_counter += 1

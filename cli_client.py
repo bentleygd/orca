@@ -6,6 +6,9 @@ from libs import orca
 from libs.coreutils import ValidateInput
 
 
+# Loading config file.
+config = ConfigParser()
+config.read('orca.ini')
 # Setting up an asrgument parser for CLI execution.
 parser = ArgumentParser(
     prog='Orca CLI Client',
@@ -17,7 +20,6 @@ parser.add_argument(
     'action',
     help='Action to perform.',
     choices=['pull', 'purge'],
-    default='pull'
 )
 parser.add_argument(
     '-se', '--sender',
@@ -59,124 +61,141 @@ if orca_args.verbose:
     # Setting up console logging.
     print('Verbose mode enabled.')
     basicConfig(
-        format='%(asctime)s %(levelname)s: %(message)s',
+        format='%(asctime)s %(name)s %(levelname)s: %(message)s',
         datefmt='%m/%d/%Y %H:%M:%S',
-        level=DEBUG
+        level=config['log']['verbose']
     )
+    log.debug('Action is %s' % orca_args.action)
 else:
     # Setting up file config.
     basicConfig(
-        filename='orca.log',
+        filename=config['log']['log_file'],
         format='%(asctime)s %(levelname)s: %(message)s',
         datefmt='%m/%d/%Y %H:%M:%S',
-        level=INFO
+        level=config['log']['normal']
     )
 # Initializing Input Validation.
 validate = ValidateInput()
 # Calling orca for email quarantine.
-if orca_args.action == 'pull':
-    phish_hunt = orca.Orca()
-    # temporary for testing
-    config = ConfigParser()
-    config.read('orca.ini')
-    phish_hunt.mailboxes = [config['test']['mailbox']]
-    # Looking for phishing emails based on supplied arguments.
-    # Check if URL is supplied.
-    if orca_args.url is not None:
-        # Performing input validation.
-        url_validate = validate.URL(orca_args.url)
-        if url_validate is False:
-            print('Input validation for URL failed.  Exiting')
-            exit(1)
-        # Finding and pulling emails with indicated URL.
-        log.debug('Performing URL pull for %s' % orca_args.url)
-        phish_list = phish_hunt.find_phish(url=orca_args.url)
+phish_hunt = orca.Orca()
+# This is for testing only.
+phish_hunt.mailboxes = [config['test']['mailbox']]
+# Looking for phishing emails based on supplied arguments.
+# Check if URL is supplied.
+if orca_args.url is not None:
+    # Performing input validation.
+    url_validate = validate.URL(orca_args.url)
+    if url_validate is False:
+        print('Input validation for URL failed.  Exiting')
+        exit(1)
+    # Finding and pulling emails with indicated URL.
+    log.debug('Performing URL pull for %s' % orca_args.url)
+    phish_list = phish_hunt.find_phish(url=orca_args.url)
+    # Checking for pull or purge and taking appropriate action.
+    if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
-    # Check if file hash is supplied.
-    elif orca_args.hash is not None:
-        # Performing input validation.
-        hash_validate = validate.SHA1(orca_args.hash)
-        if hash_validate is False:
-            print('SHA1 hash failed input validation. Exiting.')
-            exit(1)
-        # Finding and pulling emails with indicated file hash.
-        log.debug('Performing SHA1 hash pull for %s' % orca_args.hash)
-        phish_list = phish_hunt.find_phish(file_hash=orca_args.hash)
+    elif orca_args.action == 'purge':
+        phish_hunt.purge_email(phish_list)
+# Check if file hash is supplied.
+elif orca_args.hash is not None:
+    # Performing input validation.
+    hash_validate = validate.SHA1(orca_args.hash)
+    if hash_validate is False:
+        print('SHA1 hash failed input validation. Exiting.')
+        exit(1)
+    # Finding and pulling emails with indicated file hash.
+    log.debug('Performing SHA1 hash pull for %s' % orca_args.hash)
+    phish_list = phish_hunt.find_phish(file_hash=orca_args.hash)
+    # Checking for pull or purge and taking appropriate action.
+    if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
-    # Checking if sender and subject are supplied.
-    elif (orca_args.sender is not None and
-            orca_args.subject is not None):
-        # Performing input validation.
-        sender_validate = validate.Email(orca_args.sender)
-        if sender_validate is False:
-            print('Sender email address failed validation.  Exiting.')
-            exit(1)
-        subject_validate = validate.Subject(orca_args.subject)
-        if subject_validate is False:
-            print('Email sujbect input validation failed.  Exiting.')
-            exit(1)
-        # Finding and pulling emails that match criteria.
-        log.debug(
-            'Pulling sender %s subject %s' %
-            (orca_args.sender, orca_args.subject)
-        )
-        phish_list = phish_hunt.find_phish(
-            sender=orca_args.sender,
-            subject=orca_args.subject
-        )
+    elif orca_args.action == 'purge':
+        phish_hunt.purge_email(phish_list)
+# Checking if sender, subject and file extension are supplied.
+elif (
+    orca_args.sender is not None and
+    orca_args.subject is not None and
+    orca_args.file_extension is not None
+):
+    # Beginning input validation.
+    validate_sender = validate.Email(orca_args.sender)
+    if validate_sender is False:
+        print('Sender email address faield input validation.  Exiting.')
+        exit(1)
+    validate_subject = validate.Subject(orca_args.subject)
+    if validate_subject is False:
+        print('Email subject line input validation failed.  Exiting')
+        exit(1)
+    validate_file = validate.FileExt(orca_args.file_extension)
+    if validate_file is False:
+        print('File extension input validation failed.  Exiting.')
+        exit(1)
+    # Finding and pulling emails that match the given criteria.
+    phish_list = phish_hunt.find_phish(
+        sender=orca_args.sender,
+        subject=orca_args.subject,
+        file_ext=orca_args.file_extension
+    )
+    # Checking for pull or purge and taking appropriate action.
+    if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
-    # Checking if sender and file extension are supplied.
-    elif (orca_args.sender is not None and
-            orca_args.file_extension is not None):
-        # Performing input validation.
-        sender_validate = validate.Email(orca_args.sender)
-        if sender_validate is False:
-            print('Sender email address failed input validation.  Exiting.')
-            exit(1)
-        file_validate = validate.FileExt(orca_args.file_extension)
-        if file_validate is False:
-            print('File extension input validation failed.  Exiting.')
-            exit(1)
-        # Finding and pulling emails that match criteria.
-        phish_list = phish_hunt.find_phish(
-            sender=orca_args.sender,
-            file_ext=orca_args.file_extension
-        )
+    elif orca_args.action == 'purge':
+        phish_hunt.purge_email(phish_list)
+# Checking if sender and subject are supplied.
+elif (orca_args.sender is not None and
+        orca_args.subject is not None):
+    # Performing input validation.
+    sender_validate = validate.Email(orca_args.sender)
+    if sender_validate is False:
+        print('Sender email address failed validation.  Exiting.')
+        exit(1)
+    subject_validate = validate.Subject(orca_args.subject)
+    if subject_validate is False:
+        print('Email sujbect input validation failed.  Exiting.')
+        exit(1)
+    phish_list = phish_hunt.find_phish(
+        sender=orca_args.sender,
+        subject=orca_args.subject
+    )
+    # Checking for pull or purge and taking appropriate action.
+    if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
-    # Checking if sender, subject and file extension are supplied.
-    elif (
-        orca_args.sender is not None and
-        orca_args.subject is not None and
-        orca_args.file_extension is not None
-    ):
-        # Beginning input validation.
-        validate_sender = validate.Email(orca_args.sender)
-        if validate_sender is False:
-            print('Sender email address faield input validation.  Exiting.')
-            exit(1)
-        validate_subject = validate.Subject(orca_args.subject)
-        if validate_subject is False:
-            print('Email subject line input validation failed.  Exiting')
-            exit(1)
-        validate_file = validate.FileExt(orca_args.file_extension)
-        if validate_file is False:
-            print('File extension input validation failed.  Exiting.')
-            exit(1)
-        # Finding and pulling emails that match the given criteria.
-        phish_list = phish_hunt.find_phish(
-            sender=orca_args.sender,
-            subject=orca_args.subject,
-            file_ext=orca_args.file_extension
-        )
+    elif orca_args.action == 'purge':
+        phish_hunt.purge_email(phish_list)
+# Checking if sender and file extension are supplied.
+elif (orca_args.sender is not None and
+        orca_args.file_extension is not None):
+    # Performing input validation.
+    sender_validate = validate.Email(orca_args.sender)
+    if sender_validate is False:
+        print('Sender email address failed input validation.  Exiting.')
+        exit(1)
+    file_validate = validate.FileExt(orca_args.file_extension)
+    if file_validate is False:
+        print('File extension input validation failed.  Exiting.')
+        exit(1)
+    # Finding and pulling emails that match criteria.
+    phish_list = phish_hunt.find_phish(
+        sender=orca_args.sender,
+        file_ext=orca_args.file_extension
+    )
+    # Checking for pull or purge and taking appropriate action.
+    if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
-    # Checking only for sender
-    elif orca_args.sender is not None:
-        # Performing input validation.
-        validate_sender = validate.Email(orca_args.sender)
-        if validate_sender is False:
-            print('Sender email address failed input validation.  Exiting.')
-            exit(1)
-        # Finding and pulling emails that match the sender.
-        log.debug('Pulling email based on sender: %s' % orca_args.sender)
-        phish_list = phish_hunt.find_phish(sender=orca_args.sender)
+    elif orca_args.action == 'purge':
+        phish_hunt.purge_email(phish_list)
+# Checking only for sender
+elif orca_args.sender is not None:
+    # Performing input validation.
+    validate_sender = validate.Email(orca_args.sender)
+    if validate_sender is False:
+        print('Sender email address failed input validation.  Exiting.')
+        exit(1)
+    # Finding and pulling emails that match the sender.
+    log.debug('Pulling email based on sender: %s' % orca_args.sender)
+    phish_list = phish_hunt.find_phish(sender=orca_args.sender)
+    # Checking for pull or purge and taking appropriate action.
+    if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
+    elif orca_args.action == 'purge':
+        phish_hunt.purge_email(phish_list)
