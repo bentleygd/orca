@@ -76,7 +76,7 @@ else:
     )
 # Initializing Input Validation.
 validate = ValidateInput()
-# Calling orca for email quarantine.
+# Calling orca.
 phish_hunt = orca.Orca()
 # This is for testing only.
 phish_hunt.mailboxes = [config['test']['mailbox']]
