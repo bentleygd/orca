@@ -52,8 +52,12 @@ parser.add_argument(
     help='Increasese verbosity level',
     action='store_true'
 )
+parser.add_argument(
+    '-q', '--quiet',
+    help='Suppress console logging.',
+    action='store_true'
+)
 orca_args = parser.parse_args()
-
 # Setting up logging.
 log = getLogger(__name__)
 # Use console logging if verbose is enabled.  Otherwise, log to file.
@@ -66,10 +70,16 @@ if orca_args.verbose:
         level=config['log']['verbose']
     )
     log.debug('Action is %s' % orca_args.action)
-else:
+elif orca_args.quiet:
     # Setting up file config.
     basicConfig(
-        filename=config['log']['log_file'],
+        format='%(asctime)s %(levelname)s: %(message)s',
+        datefmt='%m/%d/%Y %H:%M:%S',
+        level=config['log']['normal']
+    )
+else:
+    # Setting up standard console logging.
+    basicConfig(
         format='%(asctime)s %(levelname)s: %(message)s',
         datefmt='%m/%d/%Y %H:%M:%S',
         level=config['log']['normal']
