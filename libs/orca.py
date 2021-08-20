@@ -299,12 +299,12 @@ class Orca:
             json_array.append(json_body)
             # Making sure to keep the JSON array at or under 10 entries.
             if len(json_array) == 10:
-                log.debug('Max mailbox size reached.')
+                log.info('Max mailbox size reached.')
                 # Checking API count.
                 if self.api_counter == 20:
                     sleep(60)
                     self.api_counter = 0
-                    log.debug('API rate limit reached.  Sleeping.')
+                    log.info('API rate limit reached.  Sleeping.')
                 # Posting JSON array.
                 response = request(
                     'POST',
@@ -332,7 +332,7 @@ class Orca:
         if self.api_counter == 20:
             sleep(60)
             self.api_counter = 0
-            log.debug('API rate limit reached.  Sleeping.')
+            log.info('API rate limit reached.  Sleeping.')
         # Posting JSON array.
         response = request(
             'POST',
@@ -394,12 +394,12 @@ class Orca:
             json_array.append(json_body)
             # Making sure to keep the JSON array at or under 10 entries.
             if len(json_array) == 10:
-                log.debug('Reached max mailbox size.')
+                log.info('Reached max mailbox size.')
                 # Checking API count.
                 if self.api_counter == 20:
                     sleep(60)
                     self.api_counter = 0
-                    log.debug('API rate limit reached.  Sleeping.')
+                    log.info('API rate limit reached.  Sleeping.')
                 # Posting JSON array.
                 response = request(
                     'POST',
@@ -419,7 +419,7 @@ class Orca:
                     continue
                 self.api_counter += 1
                 log.info('Pulled emails from %d mailboxes' % (len(json_array)))
-                log.debug('Reaached max array size.  Clearing array.')
+                log.debug('Reached max array size.  Clearing array.')
                 json_array.clear()
                 sleep(30)
         # Sending the API call with 9 or fewer entries.
