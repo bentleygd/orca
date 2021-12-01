@@ -19,7 +19,8 @@ parser = ArgumentParser(
 parser.add_argument(
     'action',
     help='Action to perform.',
-    choices=['pull', 'purge'],
+    choices=['pull'],
+    default='pull'
 )
 parser.add_argument(
     '-se', '--sender',
@@ -73,6 +74,7 @@ if orca_args.verbose:
 elif orca_args.quiet:
     # Setting up file config.
     basicConfig(
+        logifle='orca.log',
         format='%(asctime)s %(levelname)s: %(message)s',
         datefmt='%m/%d/%Y %H:%M:%S',
         level=config['log']['normal']
@@ -99,12 +101,21 @@ if orca_args.url is not None:
         exit(1)
     # Finding and pulling emails with indicated URL.
     phish_list = phish_hunt.find_phish(url=orca_args.url)
+    print('*' * 32 + 'WARNING' + '*' * 32)
+    print('You are going to pull email from %d mailboxes.' % len(phish_list))
+    warning = str(input('Press Y/y to continue> '))
+    if warning.lower() == 'y':
+        log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
+        pass
+    else:
+        print('*' * 32 + 'ABORTING' + '*' * 32)
+        exit(0)
     # Checking for pull or purge and taking appropriate action.
     log.debug('Performing URL pull for %s' % orca_args.url)
     if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
-    elif orca_args.action == 'purge':
-        phish_hunt.purge_email(phish_list)
+    # elif orca_args.action == 'purge':
+    #    phish_hunt.purge_email(phish_list)
 # Check if file hash is supplied.
 elif orca_args.hash is not None:
     # Performing input validation.
@@ -114,12 +125,21 @@ elif orca_args.hash is not None:
         exit(1)
     # Finding and pulling emails with indicated file hash.
     phish_list = phish_hunt.find_phish(file_hash=orca_args.hash)
+    print('*' * 32 + 'WARNING' + '*' * 32)
+    print('You are going to pull email from %d mailboxes.' % len(phish_list))
+    warning = str(input('Press Y/y to continue> '))
+    if warning.lower() == 'y':
+        log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
+        pass
+    else:
+        print('*' * 32 + 'ABORTING' + '*' * 32)
+        exit(0)
     # Checking for pull or purge and taking appropriate action.
     log.debug('Performing SHA1 hash pull for %s' % orca_args.hash)
     if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
-    elif orca_args.action == 'purge':
-        phish_hunt.purge_email(phish_list)
+    # elif orca_args.action == 'purge':
+    #     phish_hunt.purge_email(phish_list)
 # Checking if sender, subject and file extension are supplied.
 elif (
     orca_args.sender is not None and
@@ -145,6 +165,15 @@ elif (
         subject=orca_args.subject,
         file_ext=orca_args.file_extension
     )
+    print('*' * 32 + 'WARNING' + '*' * 32)
+    print('You are going to pull email from %d mailboxes.' % len(phish_list))
+    warning = str(input('Press Y/y to continue> '))
+    if warning.lower() == 'y':
+        log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
+        pass
+    else:
+        print('*' * 32 + 'ABORTING' + '*' * 32)
+        exit(0)
     # Checking for pull or purge and taking appropriate action.
     log.debug(
         'Pulling based on:\nsender:%s subject:%s file_ext:%s' %
@@ -154,8 +183,8 @@ elif (
     )
     if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
-    elif orca_args.action == 'purge':
-        phish_hunt.purge_email(phish_list)
+    # elif orca_args.action == 'purge':
+    #     phish_hunt.purge_email(phish_list)
 # Checking if sender and subject are supplied.
 elif (orca_args.sender is not None and
         orca_args.subject is not None):
@@ -172,6 +201,15 @@ elif (orca_args.sender is not None and
         sender=orca_args.sender,
         subject=orca_args.subject
     )
+    print('*' * 32 + 'WARNING' + '*' * 32)
+    print('You are going to pull email from %d mailboxes.' % len(phish_list))
+    warning = str(input('Press Y/y to continue> '))
+    if warning.lower() == 'y':
+        log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
+        pass
+    else:
+        print('*' * 32 + 'ABORTING' + '*' * 32)
+        exit(0)
     # Checking for pull or purge and taking appropriate action.
     log.debug(
         'Pulling based on sender:%s subject:%s' %
@@ -199,6 +237,15 @@ elif (orca_args.sender is not None and
         sender=orca_args.sender,
         file_ext=orca_args.file_extension
     )
+    print('*' * 32 + 'WARNING' + '*' * 32)
+    print('You are going to pull email from %d mailboxes.' % len(phish_list))
+    warning = str(input('Press Y/y to continue> '))
+    if warning.lower() == 'y':
+        log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
+        pass
+    else:
+        print('*' * 32 + 'ABORTING' + '*' * 32)
+        exit(0)
     # Checking for pull or purge and taking appropriate action.
     log.debug(
         'Pulling based on sender:%s file_ext:%s' %
@@ -207,8 +254,8 @@ elif (orca_args.sender is not None and
     )
     if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
-    elif orca_args.action == 'purge':
-        phish_hunt.purge_email(phish_list)
+    # elif orca_args.action == 'purge':
+    #     phish_hunt.purge_email(phish_list)
 # Checking only for sender
 elif orca_args.sender is not None:
     # Performing input validation.
@@ -218,9 +265,18 @@ elif orca_args.sender is not None:
         exit(1)
     # Finding and pulling emails that match the sender.
     phish_list = phish_hunt.find_phish(sender=orca_args.sender)
+    print('*' * 32 + 'WARNING' + '*' * 32)
+    print('You are going to pull email from %d mailboxes.' % len(phish_list))
+    warning = str(input('Press Y/y to continue> '))
+    if warning.lower() == 'y':
+        log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
+        pass
+    else:
+        print('*' * 32 + 'ABORTING' + '*' * 32)
+        exit(0)
     # Checking for pull or purge and taking appropriate action.
     log.debug('Pulling email based on sender: %s' % orca_args.sender)
     if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
-    elif orca_args.action == 'purge':
-        phish_hunt.purge_email(phish_list)
+    # elif orca_args.action == 'purge':
+    #     phish_hunt.purge_email(phish_list)
