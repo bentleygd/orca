@@ -159,7 +159,7 @@ class Orca:
         if 'url' in phish_:
             log.debug('Performing URL search.')
             params = {
-                'lastndays': 1,
+                'lastndays': 3,
                 'url': phish_['url'],
                 'limit': 1000
             }
@@ -168,7 +168,7 @@ class Orca:
             log.debug('Performing SHA1 hash search.')
             params = {
                 'file_sha1': phish_['file_hash'],
-                'lastndays': 1,
+                'lastndays': 3,
                 'limit': 1000
             }
         # Search used when sender, subject and file extnension is
@@ -180,7 +180,7 @@ class Orca:
         ):
             log.debug('Performing sender/subject/file extension search.')
             params = {
-                'lastndays': 1,
+                'lastndays': 3,
                 'sender': phish_['sender'],
                 'subject': phish_['subject'],
                 'file_extension': phish_['file_ext'],
@@ -190,7 +190,7 @@ class Orca:
         elif 'subject' in phish_ and 'sender' in phish_:
             log.debug('Performing sender/subject search.')
             params = {
-                'lastndays': 1,
+                'lastndays': 3,
                 'sender': phish_['sender'],
                 'subject': phish_['subject'],
                 'limit': 1000
@@ -199,7 +199,7 @@ class Orca:
         elif 'file_ext' in phish_ and 'sender' in phish_:
             log.debug('Performing sender/file extension search.')
             params = {
-                'lastndays': 1,
+                'lastndays': 3,
                 'sender': phish_['sender'],
                 'file_extension': phish_['file_ext'],
                 'limit': 1000
@@ -208,7 +208,7 @@ class Orca:
         elif 'sender' in phish_:
             log.debug('Performing sender search.')
             params = {
-                'lastndays': 1,
+                'lastndays': 3,
                 'sender': phish_['sender'],
                 'limit': 1000
             }

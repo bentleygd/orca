@@ -122,7 +122,7 @@ class ValidateInput:
         Returns:
         Boolean - The method will return True if input validation
         passes or False if input validation fails."""
-        email_pattern = r'[a-zA-Z0-9_\.]{3,32}@[a-zA-Z0-9_]{3,32}\.\w{3,6}'
+        email_pattern = r'[a-zA-Z0-9_\.\-]{3,32}@[a-zA-Z0-9_\-]{3,32}\.\S{3,7}'
         email_validate = match(email_pattern, email)
         if email_validate:
             return True
