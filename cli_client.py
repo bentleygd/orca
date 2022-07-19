@@ -151,10 +151,6 @@ elif (
     if validate_sender is False:
         print('Sender email address faield input validation.  Exiting.')
         exit(1)
-    validate_subject = validate.Subject(orca_args.subject)
-    if validate_subject is False:
-        print('Email subject line input validation failed.  Exiting')
-        exit(1)
     validate_file = validate.FileExt(orca_args.file_extension)
     if validate_file is False:
         print('File extension input validation failed.  Exiting.')
@@ -192,10 +188,6 @@ elif (orca_args.sender is not None and
     sender_validate = validate.Email(orca_args.sender)
     if sender_validate is False:
         print('Sender email address failed validation.  Exiting.')
-        exit(1)
-    subject_validate = validate.Subject(orca_args.subject)
-    if subject_validate is False:
-        print('Email sujbect input validation failed.  Exiting.')
         exit(1)
     phish_list = phish_hunt.find_phish(
         sender=orca_args.sender,
