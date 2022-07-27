@@ -103,7 +103,7 @@ if orca_args.url is not None:
     phish_list = phish_hunt.find_phish(url=orca_args.url)
     print('*' * 32 + 'WARNING' + '*' * 32)
     print('You are going to pull email from %d mailboxes.' % len(phish_list))
-    warning = str(input('Press Y/y to continue> '))
+    warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
         log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
         pass
@@ -127,7 +127,7 @@ elif orca_args.hash is not None:
     phish_list = phish_hunt.find_phish(file_hash=orca_args.hash)
     print('*' * 32 + 'WARNING' + '*' * 32)
     print('You are going to pull email from %d mailboxes.' % len(phish_list))
-    warning = str(input('Press Y/y to continue> '))
+    warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
         log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
         pass
@@ -163,7 +163,7 @@ elif (
     )
     print('*' * 32 + 'WARNING' + '*' * 32)
     print('You are going to pull email from %d mailboxes.' % len(phish_list))
-    warning = str(input('Press Y/y to continue> '))
+    warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
         log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
         pass
@@ -195,7 +195,7 @@ elif (orca_args.sender is not None and
     )
     print('*' * 32 + 'WARNING' + '*' * 32)
     print('You are going to pull email from %d mailboxes.' % len(phish_list))
-    warning = str(input('Press Y/y to continue> '))
+    warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
         log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
         pass
@@ -231,7 +231,7 @@ elif (orca_args.sender is not None and
     )
     print('*' * 32 + 'WARNING' + '*' * 32)
     print('You are going to pull email from %d mailboxes.' % len(phish_list))
-    warning = str(input('Press Y/y to continue> '))
+    warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
         log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
         pass
@@ -259,7 +259,7 @@ elif orca_args.sender is not None:
     phish_list = phish_hunt.find_phish(sender=orca_args.sender)
     print('*' * 32 + 'WARNING' + '*' * 32)
     print('You are going to pull email from %d mailboxes.' % len(phish_list))
-    warning = str(input('Press Y/y to continue> '))
+    warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
         log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
         pass
