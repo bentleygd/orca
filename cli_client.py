@@ -106,7 +106,6 @@ if orca_args.url is not None:
     warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
         log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
-        pass
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         exit(0)
@@ -130,7 +129,6 @@ elif orca_args.hash is not None:
     warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
         log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
-        pass
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         exit(0)
@@ -166,7 +164,6 @@ elif (
     warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
         log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
-        pass
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         exit(0)
@@ -198,7 +195,6 @@ elif (orca_args.sender is not None and
     warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
         log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
-        pass
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         exit(0)
@@ -234,7 +230,6 @@ elif (orca_args.sender is not None and
     warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
         log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
-        pass
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         exit(0)
@@ -262,7 +257,6 @@ elif orca_args.sender is not None:
     warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
         log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
-        pass
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         exit(0)
