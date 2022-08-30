@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 from configparser import ConfigParser
-from logging import basicConfig, INFO, DEBUG, getLogger
+from logging import basicConfig, DEBUG, getLogger
 
 from libs import orca
 from libs.coreutils import ValidateInput
@@ -48,45 +48,15 @@ parser.add_argument(
     default=None,
     help='File extension to search for.  Do not include the .'
 )
-parser.add_argument(
-    '-v', '--verbose',
-    help='Increasese verbosity level',
-    action='store_true'
-)
-parser.add_argument(
-    '-q', '--quiet',
-    help='Suppress console logging.',
-    action='store_true'
-)
 orca_args = parser.parse_args()
 # Setting up logging.
 log = getLogger(__name__)
 # Use console logging if verbose is enabled.  Otherwise, log to file.
-if orca_args.verbose:
-    # Setting up console logging.
-    print('Verbose mode enabled.')
-    basicConfig(
-        format='%(asctime)s %(name)s %(levelname)s: %(message)s',
-        datefmt='%m/%d/%Y %H:%M:%S',
-        level=config['log']['verbose']
-    )
-    log.debug('Action is %s' % orca_args.action)
-elif orca_args.quiet:
-    # Setting up file config.
-    basicConfig(
-        logifle='orca.log',
-        format='%(asctime)s %(levelname)s: %(message)s',
-        datefmt='%m/%d/%Y %H:%M:%S',
-        level=config['log']['normal']
-    )
-else:
-    # Setting up standard console logging.
-    basicConfig(
-        format='%(asctime)s %(levelname)s: %(message)s',
-        datefmt='%m/%d/%Y %H:%M:%S',
-        level=config['log']['normal']
-    )
-
+basicConfig(
+    format='%(asctime)s %(name)s %(levelname)s: %(message)s',
+    datefmt='%m/%d/%Y %H:%M:%S',
+    level=DEBUG
+)
 # Initializing Input Validation.
 validate = ValidateInput()
 # Calling orca.
