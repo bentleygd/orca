@@ -1,3 +1,14 @@
+"""
+This module provides classes and methods to obtain information about potential
+sources of phishing emails or to integrate with Trend Micro APIs to remove
+phishing emails from users' inboxes.
+
+Classes:
+get_phish_tank_urls - Gets phishing URLs from Phish Tank.
+get_openphish_urls - Gets phishing URLs from OpenPhish.
+orca - API calls to Trend Micro to find/remove phishing emails.
+OrcaPod - Sub-class of orca.  Bulk phishing identitication and removal.
+"""
 from csv import DictReader
 from logging import getLogger
 from tempfile import TemporaryFile
@@ -31,7 +42,7 @@ class get_phish_tank_urls:
             'http://data.phishtank.com/data/' + obj.phish_tank_api +
             '/online-valid.csv'
         )
-        phish_tank_data = request('GET', phish_tank_url)
+        phish_tank_data = request('GET', phish_tank_url, timeout=5)
         try:
             phish_tank_data.raise_for_status()
         except HTTPError:
@@ -78,9 +89,10 @@ class get_openphish_urls:
             '(KHTML, like Gecko) Chrome/72.0.3626.121 Safari/537.36'
         )
         open_phish_data = request(
-            'GET',  # HTTP verb
-            'https://openphish.com/feed.txt',  # URL
-            headers={'user-agent': user_agent}  # TrollFace
+            'GET',
+            'https://openphish.com/feed.txt',
+            headers={'user-agent': user_agent},
+            timeout=5
         )
         try:
             open_phish_data.raise_for_status()
@@ -159,7 +171,7 @@ class Orca:
         if 'url' in phish_:
             log.debug('Performing URL search.')
             params = {
-                'lastndays': 3,
+                'lastndays': 7,
                 'url': phish_['url'],
                 'limit': 1000
             }
@@ -168,7 +180,7 @@ class Orca:
             log.debug('Performing SHA1 hash search.')
             params = {
                 'file_sha1': phish_['file_hash'],
-                'lastndays': 3,
+                'lastndays': 7,
                 'limit': 1000
             }
         # Search used when sender, subject and file extnension is
@@ -180,7 +192,7 @@ class Orca:
         ):
             log.debug('Performing sender/subject/file extension search.')
             params = {
-                'lastndays': 3,
+                'lastndays': 7,
                 'sender': phish_['sender'],
                 'subject': phish_['subject'],
                 'file_extension': phish_['file_ext'],
@@ -190,7 +202,7 @@ class Orca:
         elif 'subject' in phish_ and 'sender' in phish_:
             log.debug('Performing sender/subject search.')
             params = {
-                'lastndays': 3,
+                'lastndays': 7,
                 'sender': phish_['sender'],
                 'subject': phish_['subject'],
                 'limit': 1000
@@ -199,7 +211,7 @@ class Orca:
         elif 'file_ext' in phish_ and 'sender' in phish_:
             log.debug('Performing sender/file extension search.')
             params = {
-                'lastndays': 3,
+                'lastndays': 7,
                 'sender': phish_['sender'],
                 'file_extension': phish_['file_ext'],
                 'limit': 1000
@@ -208,15 +220,24 @@ class Orca:
         elif 'sender' in phish_:
             log.debug('Performing sender search.')
             params = {
-                'lastndays': 3,
+                'lastndays': 7,
                 'sender': phish_['sender'],
+                'limit': 1000
+            }
+        # Search used when only the subject is supplied.
+        elif 'subject' in phish_:
+            log.debug('Performing sender search.')
+            params = {
+                'lastndays': 7,
+                'subject': phish_['subject'],
                 'limit': 1000
             }
         response = request(
             'GET',
             tm_url,
             params=params,
-            headers=headers
+            headers=headers,
+            timeout=5
         )
         # Checking if the search was successful from an API call
         # perpsective (i.e., looking for a HTTP 200)
@@ -225,7 +246,7 @@ class Orca:
         except HTTPError:
             log.exception(
                 'Abnormal HTTP response when performing sender search. ' +
-                'The API response is %s' % response.text
+                'The API response is %s', response.text
             )
             # Incrementing rate limit counter for an unsuccesful
             # search.
@@ -253,6 +274,10 @@ class Orca:
                 log.info(
                     'Email with malicious file matching %s found in %s' %
                     (phish_['file_hash'], evil_data['mailbox'])
+                )
+            elif 'subject' in phish_:
+                log.info(
+                    'Email found in %s', (evil_data['mailbox'])
                 )
         # Incrementing rate limit counter for successful attempt.
         self.api_counter += 1
@@ -295,7 +320,7 @@ class Orca:
                 'mail_unique_id': evil['mui'],
                 'mail_message_delivery_time': evil['d_time']
             }
-            log.debug('Added to delete call %s' % json_body)
+            log.debug('Added to delete call %s', json_body)
             json_array.append(json_body)
             # Making sure to keep the JSON array at or under 10 entries.
             if len(json_array) == 10:
@@ -310,7 +335,8 @@ class Orca:
                     'POST',
                     tm_url,
                     headers=headers,
-                    json=json_array
+                    json=json_array,
+                    timeout=5
                 )
                 # Checking whether or not the API call is successful.
                 try:
@@ -323,8 +349,8 @@ class Orca:
                     self.api_counter += 1
                     continue
                 self.api_counter += 1
-                log.info('Deleted emails from %d mailboxes' % len(json_array))
-                log.debug('Array has %d entries.  Clearing.' % len(json_array))
+                log.info('Deleted emails from %d mailboxes', len(json_array))
+                log.debug('Array has %d entries.  Clearing.', len(json_array))
                 json_array.clear()
                 sleep(30)
         # Sending the API call with 9 or fewer entries.
@@ -338,7 +364,8 @@ class Orca:
             'POST',
             tm_url,
             headers=headers,
-            json=json_array
+            json=json_array,
+            timeout=5
         )
         # Checking whether or not the API call is successful.
         try:
@@ -347,10 +374,10 @@ class Orca:
         except HTTPError:
             log.exception(
                 'Non-201 response when pulling phishing email.  The API ' +
-                'response is %s' % response.text
+                'response is %s', response.text
             )
             self.api_counter += 1
-        log.info('Deleted emails from %d mailboxes' % (len(json_array)))
+        log.info('Deleted emails from %d mailboxes', (len(json_array)))
         self.api_counter += 1
 
     def pull_email(self, evil_list):
@@ -390,7 +417,7 @@ class Orca:
                 'mail_unique_id': evil['mui'],
                 'mail_message_delivery_time': evil['d_time']
             }
-            log.debug('Added to quarantine call %s' % json_body)
+            log.debug('Added to quarantine call %s', json_body)
             json_array.append(json_body)
             # Making sure to keep the JSON array at or under 10 entries.
             if len(json_array) == 10:
@@ -405,7 +432,8 @@ class Orca:
                     'POST',
                     tm_url,
                     headers=headers,
-                    json=json_array
+                    json=json_array,
+                    timeout=5
                 )
                 # Checking whether or not the API call is successful.
                 try:
@@ -418,7 +446,7 @@ class Orca:
                     self.api_counter += 1
                     continue
                 self.api_counter += 1
-                log.info('Pulled emails from %d mailboxes' % (len(json_array)))
+                log.info('Pulled emails from %d mailboxes', (len(json_array)))
                 log.debug('Reached max array size.  Clearing array.')
                 json_array.clear()
                 sleep(30)
@@ -433,7 +461,8 @@ class Orca:
             'POST',
             tm_url,
             headers=headers,
-            json=json_array
+            json=json_array,
+            timeout=5
         )
         # Checking whether or not the API call is successful.
         try:
@@ -442,10 +471,10 @@ class Orca:
         except HTTPError:
             log.exception(
                 'Non-201 response when pulling phishing email.  The API ' +
-                'response is %s' % response.text
+                'response is %s', response.text
             )
             self.api_counter += 1
-        log.info('Pulled emails from %d mailboxes' % (len(json_array)))
+        log.info('Pulled emails from %d mailboxes', (len(json_array)))
         self.api_counter += 1
 
 
@@ -469,6 +498,6 @@ class OrcaPod(Orca):
         phish_tank_api - str(), The API key used for PhishTank.
         """
         Orca.__init__(self)
-        self.phish_tank_api = Orca.config['api']['phish_tank_api']
+        self.phish_tank_api = config['api']['phish_tank_api']
         self._pt_urls = get_phish_tank_urls()  # descriptor call.
         self._op_urls = get_openphish_urls()  # descriptor call.

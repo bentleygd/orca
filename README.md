@@ -2,7 +2,7 @@
 
 Python scripts that utilize Trend Micro Cloud App Security APIs for phishing identification, mitigation and remediation.  As a courtesy warning, if Trend Micro ever substantially changes their APIs this code may not work.
 
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/bentleygd/orca.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/bentleygd/orca/alerts/) [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/bentleygd/orca.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/bentleygd/orca/context:python) [![Known Vulnerabilities](https://snyk.io/test/github/bentleygd/orca/badge.svg)](https://snyk.io/test/github/bentleygd/orca)
+[![Known Vulnerabilities](https://snyk.io/test/github/bentleygd/orca/badge.svg)](https://snyk.io/test/github/bentleygd/orca) ![Lint with Bandit and Flake8](https://github.com/bentleygd/ITGC/workflows/Lint/badge.svg) ![CodeQL](https://github.com/bentleygd/CSIC/workflows/CodeQL/badge.svg)
 
 ## Purpose
 The purpose of orca is to automate finding and removing phishing emails for customers of Trend Micro Cloud App Security.  The utilization of orca can significantally reduce man hours spent on containing and eradicating phishing threats.  The CLI client can also be leveraged to "deputize" teams outside core security teams (such as the help desk) so that phishing threats can be addressed as soon as users report them to the help desk instead of having to wait for the extra minutes needed to notify the security team.
