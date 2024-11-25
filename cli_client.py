@@ -1,3 +1,14 @@
+"""
+This module is a CLI script that calls the class/functions in orca.py and
+coreutils.py.  This is the 'main' script that is executed by usres to find
+and remove phishing emails.
+
+Classes:
+None
+
+Functions:
+None
+"""
 from argparse import ArgumentParser
 from configparser import ConfigParser
 from logging import basicConfig, DEBUG, getLogger
@@ -64,46 +75,36 @@ phish_hunt = orca.Orca()
 # Looking for phishing emails based on supplied arguments.
 # Check if URL is supplied.
 if orca_args.url is not None:
-    # Performing input validation.
-    url_validate = validate.URL(orca_args.url)
-    if url_validate is False:
-        print('Input validation for URL failed.  Exiting')
-        exit(1)
     # Finding and pulling emails with indicated URL.
     phish_list = phish_hunt.find_phish(url=orca_args.url)
     print('*' * 32 + 'WARNING' + '*' * 32)
-    print('You are going to pull email from %d mailboxes.' % len(phish_list))
+    print('You are going to pull email from %d mailboxes.', len(phish_list))
     warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
-        log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
+        log.info('Acknowledgment accepted for %d mailboxes', len(phish_list))
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         exit(0)
     # Checking for pull or purge and taking appropriate action.
-    log.debug('Performing URL pull for %s' % orca_args.url)
+    log.debug('Performing URL pull for %s', orca_args.url)
     if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
     # elif orca_args.action == 'purge':
     #    phish_hunt.purge_email(phish_list)
 # Check if file hash is supplied.
 elif orca_args.hash is not None:
-    # Performing input validation.
-    hash_validate = validate.SHA1(orca_args.hash)
-    if hash_validate is False:
-        print('SHA1 hash failed input validation. Exiting.')
-        exit(1)
     # Finding and pulling emails with indicated file hash.
     phish_list = phish_hunt.find_phish(file_hash=orca_args.hash)
     print('*' * 32 + 'WARNING' + '*' * 32)
-    print('You are going to pull email from %d mailboxes.' % len(phish_list))
+    print('You are going to pull email from %d mailboxes.', len(phish_list))
     warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
-        log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
+        log.info('Acknowledgment accepted for %d mailboxes', len(phish_list))
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         exit(0)
     # Checking for pull or purge and taking appropriate action.
-    log.debug('Performing SHA1 hash pull for %s' % orca_args.hash)
+    log.debug('Performing SHA1 hash pull for %s', orca_args.hash)
     if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
     # elif orca_args.action == 'purge':
@@ -115,11 +116,11 @@ elif (
     orca_args.file_extension is not None
 ):
     # Beginning input validation.
-    validate_sender = validate.Email(orca_args.sender)
+    validate_sender = validate.email(orca_args.sender)
     if validate_sender is False:
         print('Sender email address faield input validation.  Exiting.')
         exit(1)
-    validate_file = validate.FileExt(orca_args.file_extension)
+    validate_file = validate.file_ext(orca_args.file_extension)
     if validate_file is False:
         print('File extension input validation failed.  Exiting.')
         exit(1)
@@ -130,10 +131,10 @@ elif (
         file_ext=orca_args.file_extension
     )
     print('*' * 32 + 'WARNING' + '*' * 32)
-    print('You are going to pull email from %d mailboxes.' % len(phish_list))
+    print('You are going to pull email from %d mailboxes.', len(phish_list))
     warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
-        log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
+        log.info('Acknowledgment accepted for %d mailboxes', len(phish_list))
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         exit(0)
@@ -152,7 +153,7 @@ elif (
 elif (orca_args.sender is not None and
         orca_args.subject is not None):
     # Performing input validation.
-    sender_validate = validate.Email(orca_args.sender)
+    sender_validate = validate.email(orca_args.sender)
     if sender_validate is False:
         print('Sender email address failed validation.  Exiting.')
         exit(1)
@@ -161,10 +162,10 @@ elif (orca_args.sender is not None and
         subject=orca_args.subject
     )
     print('*' * 32 + 'WARNING' + '*' * 32)
-    print('You are going to pull email from %d mailboxes.' % len(phish_list))
+    print('You are going to pull email from %d mailboxes.', len(phish_list))
     warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
-        log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
+        log.info('Acknowledgment accepted for %d mailboxes', len(phish_list))
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         exit(0)
@@ -182,11 +183,11 @@ elif (orca_args.sender is not None and
 elif (orca_args.sender is not None and
         orca_args.file_extension is not None):
     # Performing input validation.
-    sender_validate = validate.Email(orca_args.sender)
+    sender_validate = validate.email(orca_args.sender)
     if sender_validate is False:
         print('Sender email address failed input validation.  Exiting.')
         exit(1)
-    file_validate = validate.FileExt(orca_args.file_extension)
+    file_validate = validate.file_ext(orca_args.file_extension)
     if file_validate is False:
         print('File extension input validation failed.  Exiting.')
         exit(1)
@@ -196,10 +197,10 @@ elif (orca_args.sender is not None and
         file_ext=orca_args.file_extension
     )
     print('*' * 32 + 'WARNING' + '*' * 32)
-    print('You are going to pull email from %d mailboxes.' % len(phish_list))
+    print('You are going to pull email from %d mailboxes.', len(phish_list))
     warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
-        log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
+        log.info('Acknowledgment accepted for %d mailboxes', len(phish_list))
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         exit(0)
@@ -216,22 +217,39 @@ elif (orca_args.sender is not None and
 # Checking only for sender
 elif orca_args.sender is not None:
     # Performing input validation.
-    validate_sender = validate.Email(orca_args.sender)
-    if validate_sender is False:
-        print('Sender email address failed input validation.  Exiting.')
-        exit(1)
+    # validate_sender = validate.Email(orca_args.sender)
+    # if validate_sender is False:
+    #    print('Sender email address failed input validation.  Exiting.')
+    #    exit(1)
     # Finding and pulling emails that match the sender.
     phish_list = phish_hunt.find_phish(sender=orca_args.sender)
     print('*' * 32 + 'WARNING' + '*' * 32)
-    print('You are going to pull email from %d mailboxes.' % len(phish_list))
+    print('You are going to pull email from %d mailboxes.', len(phish_list))
     warning = str(input('Press Y/N to continue> '))
     if warning.lower() == 'y':
-        log.info('Acknowledgment accepted for %d mailboxes' % len(phish_list))
+        log.info('Acknowledgment accepted for %d mailboxes', len(phish_list))
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         exit(0)
     # Checking for pull or purge and taking appropriate action.
-    log.debug('Pulling email based on sender: %s' % orca_args.sender)
+    log.debug('Pulling email based on sender: %s', orca_args.sender)
+    if orca_args.action == 'pull':
+        phish_hunt.pull_email(phish_list)
+    # elif orca_args.action == 'purge':
+    #     phish_hunt.purge_email(phish_list)
+# Chcking for subject only
+elif orca_args.subject is not None:
+    phish_list = phish_hunt.find_phish(subject=orca_args.subject)
+    print('*' * 32 + 'WARNING' + '*' * 32)
+    print('You are going to pull email from %d mailboxes.', len(phish_list))
+    warning = str(input('Press Y/N to continue> '))
+    if warning.lower() == 'y':
+        log.info('Acknowledgment accepted for %d mailboxes', len(phish_list))
+    else:
+        print('*' * 32 + 'ABORTING' + '*' * 32)
+        exit(0)
+    # Checking for pull or purge and taking appropriate action.
+    log.debug('Pulling email based on sender: %s', orca_args.sender)
     if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
     # elif orca_args.action == 'purge':

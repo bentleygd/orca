@@ -1,34 +1,33 @@
-name: Lint
+name: Lint and Test
 
 on:
-  push:
-    branches: [ "master" ]
   pull_request:
-    branches: [ "master" ]
+    branches: 
+      - master
 
 jobs:
-  lint:
+  Lint:
 
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.8
+    - uses: actions/checkout@v1
+    - name: Set up Python 3.11.10
       uses: actions/setup-python@v1
       with:
-        python-version: 3.8
+        python-version: 3.11.10
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        python -m pip install -r requirements.txt
+        # Installing testing dependencies
+        python -m pip install flake8 bandit
     - name: Lint with flake8
       run: |
-        pip install flake8
         # stop the build if there are Python syntax errors or undefined names
         flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. PEP8 max line length is 79
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=79 --statistics
-    - name: Security lint with bandit
+    - name: Test with bandit
       run: |
-        pip install bandit
-        bandit -ll . --recursive
+        bandit -ll --recursive .

@@ -1,4 +1,14 @@
-#!/usr/bin/python3
+"""
+This module provides basic functions and methods meant to be used by other
+modules.
+
+Functions:
+mail_send - sends email via SMTP.
+get_credentials - retrieves credentials from an encrypted password file.
+
+Classes:
+ValidateInput - performs input validation.
+"""
 from socket import gethostbyname, gaierror
 from smtplib import SMTP, SMTPConnectError
 from email.mime.text import MIMEText
@@ -34,11 +44,11 @@ def mail_send(mail_info):
     try:
         s = SMTP(gethostbyname(mail_info['server']), '25')
     except gaierror:
-        print('Hostname resolution of %s failed.' % mail_info['server'])
+        print('Hostname resolution of %s failed.', mail_info['server'])
         exit(1)
     except SMTPConnectError:
         print('Unable to connect to %s, the server refused the ' +
-              'connection.' % mail_info['server'])
+              'connection.', mail_info['server'])
         exit(1)
     # Sending the mail.
     s.sendmail(mail_info['sender'], mail_info['recipients'], msg.as_string())
@@ -70,7 +80,7 @@ def get_credentials(scss_dict):
     # Connecting to SCSS.  If SSL verification fails, change verify to
     # false.  This isn't recommended (as it defeats the purpose of
     # verification), but it will make the code work in an emergency.
-    scss_response = post(url, headers=headers)
+    scss_response = post(url, headers=headers, timeout=5)
     try:
         scss_response.raise_for_status
     except HTTPError:
@@ -85,35 +95,17 @@ def get_credentials(scss_dict):
 
 
 class ValidateInput:
+    """Performs input validation."""
     def __init__(self):
         """Input validation class
 
         Methods:
-        URL - Input validation for a URL.
         SHA1 - Input validation for a SHA1 hash.
         Email - Input validation for a email address.
         FileExt - Input validation for a file extension.
         Subject - Input validation for email subject line."""
 
-    def URL(self, url):
-        """Input validation for a URL.
-
-        Input:
-        url - str(), The supplied URL to validate.
-
-        Returns:
-        Boolean - The method will return True if input validation
-        passes or False if input validation fails."""
-        url_pattern = (
-            r'(http:|https:)\/\/(\w+\.\w+|\w+\.\w+\.\w+|\w+\.\w+\.\w+\.\w+)\/\S+'
-        )
-        url_validate = match(url_pattern, url)
-        if url_validate:
-            return True
-        else:
-            return False
-
-    def Email(self, email):
+    def email(self, email):
         """Input validation for an email address.
 
         Input:
@@ -131,7 +123,7 @@ class ValidateInput:
         else:
             return False
 
-    def SHA1(self, hash):
+    def sha1(self, _hash):
         """Input validation for a SHA1 hash.
 
         Input:
@@ -140,14 +132,14 @@ class ValidateInput:
         Returns:
         Boolean - The method will return True if input validation
         passes or False if input validation fails."""
-        hash_pattern = r'[a-z0-9]{40}'
-        hash_validate = match(hash_pattern, hash)
+        hash_pattern = r'[a-zA-Z0-9]{40}'
+        hash_validate = match(hash_pattern, _hash)
         if hash_validate:
             return True
         else:
             return False
 
-    def FileExt(self, file_ext):
+    def file_ext(self, file_ext):
         """Input validation for a file extension.
 
         Input:
@@ -163,7 +155,7 @@ class ValidateInput:
         else:
             return False
 
-    def Subject(self, subject_line):
+    def subject(self, subject_line):
         """Input validation for an email subject line.
         Yes, it isn't a whole lot.
 
