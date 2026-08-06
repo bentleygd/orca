@@ -1,4 +1,8 @@
 """
+This module is deprecated and should NOT be utilized.  It is included to
+continue to support those that are still using Trend Micro Cloud App Security.
+Third party dependencies (i.e., requests) have been removed in OrcaV2.
+
 This module provides classes and methods to obtain information about potential
 sources of phishing emails or to integrate with Trend Micro APIs to remove
 phishing emails from users' inboxes.
@@ -42,7 +46,7 @@ class get_phish_tank_urls:
             'http://data.phishtank.com/data/' + obj.phish_tank_api +
             '/online-valid.csv'
         )
-        phish_tank_data = request('GET', phish_tank_url, timeout=5)
+        phish_tank_data = request('GET', phish_tank_url, timeout=10)
         try:
             phish_tank_data.raise_for_status()
         except HTTPError:
@@ -92,7 +96,7 @@ class get_openphish_urls:
             'GET',
             'https://openphish.com/feed.txt',
             headers={'user-agent': user_agent},
-            timeout=5
+            timeout=10
         )
         try:
             open_phish_data.raise_for_status()
@@ -183,37 +187,13 @@ class Orca:
                 'lastndays': 7,
                 'limit': 1000
             }
-        # Search used when sender, subject and file extnension is
-        # supplied.
-        elif (
-            'file_ext' in phish_ and
-            'subject' in phish_ and
-            'sender' in phish_
-        ):
-            log.debug('Performing sender/subject/file extension search.')
-            params = {
-                'lastndays': 7,
-                'sender': phish_['sender'],
-                'subject': phish_['subject'],
-                'file_extension': phish_['file_ext'],
-                'limit': 1000
-            }
         # Search used when subject and sender is supplied.
         elif 'subject' in phish_ and 'sender' in phish_:
             log.debug('Performing sender/subject search.')
             params = {
-                'lastndays': 7,
+                'lastndays': 90,
                 'sender': phish_['sender'],
                 'subject': phish_['subject'],
-                'limit': 1000
-            }
-        # Search used when file extension and sender is supplied.
-        elif 'file_ext' in phish_ and 'sender' in phish_:
-            log.debug('Performing sender/file extension search.')
-            params = {
-                'lastndays': 7,
-                'sender': phish_['sender'],
-                'file_extension': phish_['file_ext'],
                 'limit': 1000
             }
         # Search used when only the sender is supplied.
@@ -237,7 +217,7 @@ class Orca:
             tm_url,
             params=params,
             headers=headers,
-            timeout=5
+            timeout=10
         )
         # Checking if the search was successful from an API call
         # perpsective (i.e., looking for a HTTP 200)
@@ -336,7 +316,7 @@ class Orca:
                     tm_url,
                     headers=headers,
                     json=json_array,
-                    timeout=5
+                    timeout=10
                 )
                 # Checking whether or not the API call is successful.
                 try:
@@ -365,7 +345,7 @@ class Orca:
             tm_url,
             headers=headers,
             json=json_array,
-            timeout=5
+            timeout=10
         )
         # Checking whether or not the API call is successful.
         try:
@@ -433,7 +413,7 @@ class Orca:
                     tm_url,
                     headers=headers,
                     json=json_array,
-                    timeout=5
+                    timeout=10
                 )
                 # Checking whether or not the API call is successful.
                 try:
@@ -462,7 +442,7 @@ class Orca:
             tm_url,
             headers=headers,
             json=json_array,
-            timeout=5
+            timeout=10
         )
         # Checking whether or not the API call is successful.
         try:

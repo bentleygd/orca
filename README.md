@@ -1,11 +1,11 @@
 # orca
 
-Python scripts that utilize Trend Micro Cloud App Security APIs for phishing identification, mitigation and remediation.  As a courtesy warning, if Trend Micro ever substantially changes their APIs this code may not work.
+Python scripts that utilize Trend Micro Vision One APIs for phishing identification, mitigation and remediation.  As a courtesy warning, if Trend Micro ever substantially changes their APIs this code may not work.
 
 [![Known Vulnerabilities](https://snyk.io/test/github/bentleygd/orca/badge.svg)](https://snyk.io/test/github/bentleygd/orca) ![Lint with Bandit and Flake8](https://github.com/bentleygd/ITGC/workflows/Lint/badge.svg) ![CodeQL](https://github.com/bentleygd/CSIC/workflows/CodeQL/badge.svg)
 
 ## Purpose
-The purpose of orca is to automate finding and removing phishing emails for customers of Trend Micro Cloud App Security.  The utilization of orca can significantally reduce man hours spent on containing and eradicating phishing threats.  The CLI client can also be leveraged to "deputize" teams outside core security teams (such as the help desk) so that phishing threats can be addressed as soon as users report them to the help desk instead of having to wait for the extra minutes needed to notify the security team.
+The purpose of orca is to automate finding and removing phishing emails for customers of Trend Micro Cloud Vision One.  The utilization of orca can significantally reduce man hours spent on containing and eradicating phishing threats.  The CLI client can also be leveraged to "deputize" teams outside core security teams (such as the help desk) so that phishing threats can be addressed as soon as users report them to the help desk instead of having to wait for the extra minutes needed to notify the security team.
 
 ## Installation
 
@@ -52,7 +52,7 @@ optional arguments:
 
 
   # Instantiating the Orca class.
-  phish_assist = orca.Orca()
+  phish_assist = orcav2.Orca()
   # Getting a list of phishing emails based on sender and subject line.
   evil_emails = phish_assit.find_phish(
     sender=bad_guy@evil.org,
