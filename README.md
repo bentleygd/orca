@@ -48,11 +48,11 @@ optional arguments:
 
   Alternately, if you wish to integrate the code located in libs/orca.py into your code, you can do so farily easily.
   ```python
-  from orca.libs import orca
+  from orca.libs import orcav2 as orca
 
 
   # Instantiating the Orca class.
-  phish_assist = orcav2.Orca()
+  phish_assist = orca.OrcaV2()
   # Getting a list of phishing emails based on sender and subject line.
   evil_emails = phish_assit.find_phish(
     sender=bad_guy@evil.org,
