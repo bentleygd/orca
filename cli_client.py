@@ -14,7 +14,7 @@ from configparser import ConfigParser
 from logging import basicConfig, DEBUG, getLogger
 import sys
 
-from libs import orca
+from libs import orcav2 as orca
 
 
 # Loading config file.
@@ -68,17 +68,17 @@ basicConfig(
     datefmt='%m/%d/%Y %H:%M:%S',
     level=DEBUG
 )
-phish_hunt = orca.Orca()
+phish_hunt = orca.OrcaV2()
 # Looking for phishing emails based on supplied arguments.
 # Check if URL is supplied.
 if orca_args.url is not None:
     # Finding and pulling emails with indicated URL.
     phish_list = phish_hunt.find_phish(url=orca_args.url)
     print('*' * 32 + 'WARNING' + '*' * 32)
-    print('You are going to pull email from %d mailboxes.', len(phish_list))
+    print(f'You are going to pull email from {len(phish_list)} mailboxes.')
     WARNING = str(input('Press Y/N to continue> '))
     if WARNING.lower() == 'y':
-        log.info('Acknowledgment accepted for %d mailboxes', len(phish_list))
+        log.info(f'Acknowledgment accepted for {len(phish_list)} mailboxes')
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         sys.exit()
@@ -93,10 +93,10 @@ elif orca_args.hash is not None:
     # Finding and pulling emails with indicated file hash.
     phish_list = phish_hunt.find_phish(file_hash=orca_args.hash)
     print('*' * 32 + 'WARNING' + '*' * 32)
-    print('You are going to pull email from %d mailboxes.', len(phish_list))
+    print(f'You are going to pull email from {len(phish_list)} mailboxes.')
     WARNING = str(input('Press Y/N to continue> '))
     if WARNING.lower() == 'y':
-        log.info('Acknowledgment accepted for %d mailboxes', len(phish_list))
+        log.info(f'Acknowledgment accepted for {len(phish_list)} mailboxes')
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         sys.exit()
@@ -113,11 +113,11 @@ elif (orca_args.sender is not None and
         subject=orca_args.subject
     )
     print('*' * 32 + 'WARNING' + '*' * 32)
-    print('You are going to pull email from %d mailboxes.', len(phish_list))
+    print(f'You are going to pull email from {len(phish_list)} mailboxes.')
     WARNING = str(input('Press Y/N to continue> '))
 
     if WARNING.lower() == 'y':
-        log.info('Acknowledgment accepted for %d mailboxes', len(phish_list))
+        log.info(f'Acknowledgment accepted for {len(phish_list)} mailboxes')
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         sys.exit()
@@ -128,53 +128,31 @@ elif (orca_args.sender is not None and
 
     if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
-# Checking if sender and file extension are supplied.
-elif (orca_args.sender is not None and
-        orca_args.file_hash is not None):
-    phish_list = phish_hunt.find_phish(
-        sender=orca_args.sender,
-        file_ext=orca_args.file_extension
-    )
-    print('*' * 32 + 'WARNING' + '*' * 32)
-    print('You are going to pull email from %d mailboxes.', len(phish_list))
-    WARNING = str(input('Press Y/N to continue> '))
-
-    if WARNING.lower() == 'y':
-        log.info('Acknowledgment accepted for %d mailboxes', len(phish_list))
-    else:
-        print('*' * 32 + 'ABORTING' + '*' * 32)
-        sys.exit()
-
-    log.debug(
-        f'Pulling based on sender:{orca_args.sender} file_ext:{orca_args.file_extension}'
-        )
-    if orca_args.action == 'pull':
-        phish_hunt.pull_email(phish_list)
 # Checking only for sender
 elif orca_args.sender is not None:
     phish_list = phish_hunt.find_phish(sender=orca_args.sender)
     print('*' * 32 + 'WARNING' + '*' * 32)
-    print('You are going to pull email from %d mailboxes.', len(phish_list))
+    print(f'You are going to pull email from {len(phish_list)} mailboxes.')
     WARNING = str(input('Press Y/N to continue> '))
 
     if WARNING.lower() == 'y':
-        log.info('Acknowledgment accepted for %d mailboxes', len(phish_list))
+        log.info(f'Acknowledgment accepted for {len(phish_list)} mailboxes')
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         sys.exit()
 
-    log.debug('Pulling email based on sender: %s', orca_args.sender)
+    log.debug(f'Pulling email based on sender: {orca_args.sender}')
     if orca_args.action == 'pull':
         phish_hunt.pull_email(phish_list)
 # Chcking for subject only
 elif orca_args.subject is not None:
     phish_list = phish_hunt.find_phish(subject=orca_args.subject)
     print('*' * 32 + 'WARNING' + '*' * 32)
-    print('You are going to pull email from %d mailboxes.', len(phish_list))
+    print(f'You are going to pull email from {len(phish_list)} mailboxes.')
     WARNING = str(input('Press Y/N to continue> '))
 
     if WARNING.lower() == 'y':
-        log.info('Acknowledgment accepted for %d mailboxes', len(phish_list))
+        log.info(f'Acknowledgment accepted for {len(phish_list)} mailboxes')
     else:
         print('*' * 32 + 'ABORTING' + '*' * 32)
         sys.exit()

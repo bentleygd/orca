@@ -8,7 +8,6 @@ OrcaV2 - API calls to Trend AI Vision One to find/remove phishing emails.
 """
 from logging import getLogger
 from configparser import ConfigParser
-from time import sleep
 import http.client as hc
 import urllib.parse as uparse
 import datetime as dt
@@ -70,7 +69,7 @@ class OrcaV2:
         tm_url = '/v3.0/search/emailActivities'
         headers = {'Authorization': 'Bearer ' + self.tm_api}
         params = uparse.urlencode({
-                        'select': 'select=mailMsgId,duser',
+                        'select': 'select=mailMsgId,duser,msgUuid,uniqueId,organizationId',
                         'startDateTime': (dt.datetime.now() + dt.timedelta(-7)).isoformat(),
                         'endDateTime': dt.datetime.now().isoformat(),
                         'top': 500
@@ -89,10 +88,10 @@ class OrcaV2:
                             'TMV1-Query': f'attachmentSha1:{phish_['file_hash']}'
                             })
         # Search used when subject and sender is supplied.
-        elif 'subject' in phish_ and 'sender' in phish_:
+        elif 'sender' in phish_ and 'subject' in phish_:
             log.debug('Performing sender/subject search.')
             headers.update({
-                'TMV1-Query': f'mailFromAddresses:{phish_['sender']} and mailMsgSubject:{phish_['subject']}'
+                'TMV1-Query': f'mailFromAddresses:{phish_['sender']} AND mailMsgSubject:"{phish_['subject']}"'
             })
         # Search used when only the sender is supplied.
         elif 'sender' in phish_:
@@ -107,40 +106,37 @@ class OrcaV2:
                             'TMV1-Query': f'mailMsgSubject:{phish_['subject']}'
                             })
         ssl_context = ssl.create_default_context()
-        max_tries = 2
-        for attempt in range(max_tries):
-            try:
-                conn = hc.HTTPSConnection(
-                    tm_host,
-                    context=ssl_context,
-                    timeout=10
-                    )
-            except TimeoutError:
-                log.exception('Connection timed out.  Trying again.')
-                if attempt <= max_tries:
-                    sleep(3)
-                else:
-                    log.error('Max attempts reached.  Aborting.')
-                    conn.close()
-                    sys.exit(1)
-            finally:
-                conn.request('GET', tm_url, params, headers=headers)
-                response = conn.getresponse()
-                data = json.loads(response.read())
-                print(data)
-                for entry in data['items']:
-                    print(entry.keys())
+        try:
+            conn = hc.HTTPSConnection(
+                tm_host,
+                context=ssl_context,
+                timeout=10
+                )
+        except TimeoutError:
+            log.exception(
+                'Connection timed out.  Investigate connection and try again'
+                )
+            sys.exit(1)
+        except hc.HTTPException:
+            log.exception(
+                'HTTP error when connecting to TrendAI V1'
+            )
+            sys.exit(1)
+        finally:
+            conn.request('GET', tm_url, params, headers=headers)
+            response = conn.getresponse()
+            data = json.loads(response.read())
         evil_sender_data = data['items']
+        log.debug(f'{len(evil_sender_data)} emails found mathcing criteria.')
         for evil_data in evil_sender_data:
-            if evil_data['msgUuid']:
+            if evil_data['pname'] == 'Email Sensor':
                 evil_list.append({
-                    'muid': evil_data['msgUuid']
+                    'mmi': evil_data['mailMsgId'],
+                    'mailbox': evil_data['mailbox']
                 })
-            elif evil_data['mailMsgId']:
-                evil_list.append({
-                    'mmi': evil_data['mailMsgId']
-                    })
-            log.info(f'Email found in {evil_data['mailSmtpRecipients']}')
+                log.info(f'Pullable email found in {evil_data['mailbox']}')
+            else:
+                log.info(f'Email not pullable. MSGID: {evil_data['mailMsgId']}')
         conn.close()
         return evil_list
 
@@ -171,40 +167,26 @@ class OrcaV2:
         # Iterate through the list of evil emails, making an API call
         # to quarantine the email in question.  If there is an error
         # containing the evil, log it and skip over that item.
-        max_tries = 2
-        json_array = []
-        for attempt in range(max_tries):
-            try:
-                conn = hc.HTTPSConnection(
-                    tm_host,
-                    context=ssl_context,
-                    timeout=10
+        try:
+            conn = hc.HTTPSConnection(
+                tm_host,
+                context=ssl_context,
+                timeout=10
+            )
+        except TimeoutError:
+            log.exception(
+                'Connection timed out.  Investigate connection health.'
                 )
-            except TimeoutError:
-                log.exception('Connection timed out.  Trying again.')
-                if attempt <= max_tries:
-                    sleep(3)
-                else:
-                    log.error('Max attempts reached.  Aborting.')
-                    conn.close()
-                    sys.exit(1)
+            sys.exit(1)
         while len(evil_list) != 0:
             evil = evil_list.pop(0)
             # All of these are required parameters.  Do not change.
-            if evil['muid']:
-                json_body = json.dumps([{
-                    'description': 'Orca_Quarantine',
-                    'uniqueId': evil['muid'],
-                }])
-                print(json_body)
-            elif evil['mmi']:
-                json_body = json.dumps([{
-                    'description': 'Orca_Quarantine',
-                    'messageId': evil['mmi'],
-                }])
-                print(json_body)
+            json_body = json.dumps([{
+                'description': 'Orca_Quarantine',
+                'messageId': evil['mmi'],
+                'mailbox': evil['mailbox']
+            }])
             log.debug('Added to quarantine call %s', json_body)
-            # Making sure to keep the JSON array at or under 10 entries.
             try:
                 conn.request('POST', tm_url, headers=headers, body=json_body)
                 response = conn.getresponse()
