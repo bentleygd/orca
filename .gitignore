@@ -131,4 +131,9 @@ dmypy.json
 .pyre/
 
 # Ignoring configuration file.
-**.ini
+*.ini
+
+# Ignoring crap from HP Wolf
+~BROMIUM/
+**/~BROMIUM/
+*.bromium
